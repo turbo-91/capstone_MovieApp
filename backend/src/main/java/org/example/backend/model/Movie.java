@@ -22,5 +22,4 @@ public record Movie(
     public Movie withSlug(String slug) {
         return new Movie(this.slug, this.title, this.year, this.overview, this.imgUrl);
     }
-
 }
