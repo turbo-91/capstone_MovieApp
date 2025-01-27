@@ -1,4 +1,4 @@
-name: SonarQube
+name: capstone_movieApp_SonarQube
 on:
   push:
     branches:
