@@ -1,5 +1,6 @@
 #Allgemein
 .idea
+.DS_Store
 
 #Backend
 backend/target/
