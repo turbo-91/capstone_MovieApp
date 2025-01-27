@@ -4,7 +4,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "movies")
 public record Movie(
-        int id,
         String slug,
         String title,
         String year,
@@ -12,8 +11,7 @@ public record Movie(
         String imgUrl
 ) {
 
-    public Movie(int id, String slug, String title, String year, String overview, String imgUrl) {
-        this.id = id;
+    public Movie(String slug, String title, String year, String overview, String imgUrl) {
         this.slug = slug;
         this.title = title;
         this.year = year;
@@ -21,8 +19,8 @@ public record Movie(
         this.imgUrl = imgUrl;
     }
 
-    public Movie withId(int id) {
-        return new Movie(id, this.slug, this.title, this.year, this.overview, this.imgUrl);
+    public Movie withSlug(String slug) {
+        return new Movie(this.slug, this.title, this.year, this.overview, this.imgUrl);
     }
 
 }
