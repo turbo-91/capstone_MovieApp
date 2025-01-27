@@ -1,5 +1,8 @@
 package org.example.backend.model;
 
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "movies")
 public record Movie(
         int id,
         String slug,
