@@ -6,12 +6,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public record Movie(
         String slug,
         String title,
-        String year,
+        int year,
         String overview,
         String imgUrl
 ) {
 
-    public Movie(String slug, String title, String year, String overview, String imgUrl) {
+    public Movie(String slug, String title, int year, String overview, String imgUrl) {
         this.slug = slug;
         this.title = title;
         this.year = year;
