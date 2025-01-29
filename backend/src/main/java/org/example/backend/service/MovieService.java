@@ -42,71 +42,75 @@ public class MovieService {
         String netzkinoUrl = String.format("%s?q=%s&d=%s", NETZKINO_URL, query, netzkinoEnv);
         System.out.println("Generated Netzkino URL: " + netzkinoUrl);
 
-        // Step 1: Fetch movies from API 1
-        ResponseEntity<NetzkinoResponse[]> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse[].class);
-        NetzkinoResponse[] netzkinoResponses = netzkinoResponse.getBody();
+        ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
+        NetzkinoResponse response = netzkinoResponse.getBody();
 
-        if (netzkinoResponses == null) {
+        if (response == null || response.posts().isEmpty()) {
             System.out.println("No movies found from API 1.");
             return Collections.emptyList();
         }
 
-        System.out.println("Fetched " + netzkinoResponses.length + " movies from API 1.");
-
+        System.out.println("Fetched " + response.posts().size() + " movies from API 1.");
         List<Movie> fetchedMovies = new ArrayList<>();
 
-        // Step 2: Get each movie
-        for (NetzkinoResponse response : netzkinoResponses) {
-            for (Post netzkinoMovie : response.posts()) {
-                System.out.println("Processing movie: " + netzkinoMovie.title());
+        for (Post netzkinoMovie : response.posts()) {
+            System.out.println("Processing movie: " + netzkinoMovie.title());
 
-                // Extract necessary values correctly
-                String slug = netzkinoMovie.slug();
-                String title = netzkinoMovie.title();
-                int year = Integer.parseInt(netzkinoMovie.custom_fields().Jahr().get(0));
-                String overview = netzkinoMovie.content();
-                String imdbLink = netzkinoMovie.custom_fields().IMDb_Link().get(0); 
+            String slug = netzkinoMovie.slug();
+            String title = netzkinoMovie.title();
+            String overview = netzkinoMovie.content();
+            int year = 0;
 
-                System.out.println("Slug: " + slug);
-                System.out.println("Title: " + title);
-                System.out.println("Year: " + year);
-                System.out.println("Overview: " + overview);
-                System.out.println("IMDb Link: " + imdbLink);
-
-                // Base TMDB URL and API key
-                String imdbId = imdbLink.substring(imdbLink.lastIndexOf("/") + 1);
-                System.out.println("extract imdb ID: " + imdbId);
-                String tmdbBaseUrl = "https://api.themoviedb.org/3/find/";
-                String apiKey = "78247849b9888da02ffb1655caa3a9b9"; // Replace with your actual API key
-                String tmdbUrl = String.format("%s%s?api_key=%s&language=en-US&external_source=imdb_id",
-                        tmdbBaseUrl, imdbId, apiKey);
-                System.out.println("Full tmdb URL: " + tmdbUrl);
-
-                // Fetch each movie from API 2
-                System.out.println("Fetching additional info from tmdb: " + tmdbUrl);
-
-                ResponseEntity<TmdbResponse> tmdbResponse = restTemplate.getForEntity(tmdbUrl, TmdbResponse.class);
-                TmdbResponse tmdbInfo = tmdbResponse.getBody();
-
-                if (tmdbInfo == null || tmdbInfo.movie_results().isEmpty()) {
-                    System.out.println("No additional entry found in tmdb found for movie: " + title);
+            if (netzkinoMovie.custom_fields() != null
+                    && netzkinoMovie.custom_fields().Jahr() != null
+                    && !netzkinoMovie.custom_fields().Jahr().isEmpty()) {
+                try {
+                    year = Integer.parseInt(netzkinoMovie.custom_fields().Jahr().get(0));
+                } catch (NumberFormatException e) {
+                    System.out.println("Error parsing year for: " + title);
                     continue;
                 }
-
-                // Extract poster_path and build full image URL
-                TmdbMovieResult movieResult = tmdbInfo.movie_results().get(0); // Get first movie result
-                String imgUrl = (movieResult.poster_path() != null) ? "https://image.tmdb.org/t/p/w500" + movieResult.poster_path() : "N/A";
-
-                System.out.println("Received additional info for " + title + ": " + imgUrl);
-
-                // Step 4: Create and save the movie object
-                Movie movieToSave = new Movie(slug, title, year, overview, imgUrl);
-                movieRepo.save(movieToSave);
-                fetchedMovies.add(movieToSave);
-
-                System.out.println("Movie saved: " + movieToSave);
             }
+
+            String imdbLink = (netzkinoMovie.custom_fields().IMDb_Link() != null && !netzkinoMovie.custom_fields().IMDb_Link().isEmpty())
+                    ? netzkinoMovie.custom_fields().IMDb_Link().get(0)
+                    : null;
+
+            if (imdbLink == null || !imdbLink.contains("/tt")) {
+                System.out.println("Skipping TMDB lookup, IMDb ID missing for: " + title);
+                continue;
+            }
+
+            String imdbId = imdbLink.substring(imdbLink.lastIndexOf("/tt") + 1);
+            System.out.println("Extracted IMDb ID: " + imdbId);
+
+            String tmdbUrl = String.format("https://api.themoviedb.org/3/find/%s?api_key=%s&language=en-US&external_source=imdb_id",
+                    imdbId, tmdbApiKey);
+
+            System.out.println("Fetching additional info from TMDB: " + tmdbUrl);
+
+            ResponseEntity<TmdbResponse> tmdbResponse = restTemplate.getForEntity(tmdbUrl, TmdbResponse.class);
+            TmdbResponse tmdbInfo = tmdbResponse.getBody();
+
+            if (tmdbInfo == null || tmdbInfo.movie_results().isEmpty()) {
+                System.out.println("No additional entry found in TMDB for movie: " + title);
+                continue;
+            }
+
+            TmdbMovieResult movieResult = tmdbInfo.movie_results().get(0);
+            String imgUrl = (movieResult.poster_path() != null)
+                    ? "https://image.tmdb.org/t/p/w500" + movieResult.poster_path()
+                    : "N/A";
+
+            System.out.println("Received additional info for " + title + ": " + imgUrl);
+
+            Movie movieToSave = new Movie(slug, title, year, overview, imgUrl);
+            movieRepo.save(movieToSave);
+            fetchedMovies.add(movieToSave);
+
+            System.out.println("Movie saved: " + movieToSave);
         }
+
         System.out.println("Finished processing all movies.");
         return fetchedMovies;
     }

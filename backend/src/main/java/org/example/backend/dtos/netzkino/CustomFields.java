@@ -1,5 +1,7 @@
 package org.example.backend.dtos.netzkino;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -27,6 +29,7 @@ public record CustomFields(
         List<String> FSK,
         List<String> GEO_Availability_Exclusion,
         List<String> IMDb_Bewertung,
+        @JsonProperty("IMDb-Link")
         List<String> IMDb_Link,
         List<String> Jahr,
         List<String> offlineAvailable,
