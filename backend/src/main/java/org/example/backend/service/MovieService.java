@@ -21,19 +21,18 @@ public class MovieService {
     private final MovieRepo movieRepo;
     private final RestTemplate restTemplate;
 
-    @Value("${TMDB_API_KEY}")
-    private String tmdbApiKey;
-
-    @Value("${NETZKINO_ENV}")
-    private String netzkinoEnv;
+    private final String tmdbApiKey;
+    private final String netzkinoEnv;
 
     private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
 
-    public MovieService(MovieRepo movieRepo, RestTemplate restTemplate) {
+    public MovieService(MovieRepo movieRepo, RestTemplate restTemplate, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv ) {
         this.movieRepo = movieRepo;
         this.restTemplate = restTemplate;
+        this.tmdbApiKey = tmdbApiKey;
+        this.netzkinoEnv=netzkinoEnv;
     }
 
     public List<Movie> fetchAndStoreMovies(String query) {
