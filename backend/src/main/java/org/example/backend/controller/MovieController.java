@@ -3,6 +3,7 @@ package org.example.backend.controller;
 import org.example.backend.model.Movie;
 import org.example.backend.service.MovieService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -56,6 +57,13 @@ public class MovieController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
+    }
+
+    @GetMapping("/search/{query}")
+    public ResponseEntity<List<Movie>> searchMovies(@PathVariable String query) {
+        System.out.println("CONTROLLER: Received search query: " + query);
+        List<Movie> movies = movieService.fetchAndStoreMovies(query);
+            return ResponseEntity.ok(movies);
     }
 
 }
