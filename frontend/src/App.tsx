@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+type Movie = {
+    slug: string;
+    title: string;
+    year: number;
+    overview: string;
+    imgUrl: string;
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+    const [movies, setMovies] = useState<Movie[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    useEffect(() => {
+        const fetchMovies = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Send a GET request with query parameters
+                const response = await axios.get("/api/movies/combine", {
+                    params: {
+                        query: "pete",
+                        env: "devtest",
+                        imdbId: "tt0036621",
+                    },
+                });
+
+                // Update state with the fetched movie
+                setMovies([response.data]); // Backend returns a single movie
+            } catch (err) {
+                console.error("Error fetching movie:", err);
+                setError("Failed to fetch movie. Please try again later.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMovies();
+    }, []); // Fetch once on mount
+
+    if (loading) return <div>Loading movies...</div>;
+    if (error) return <div>{error}</div>;
+
+    return (
+        <div className="movie-list">
+            {movies.map((movie) => (
+                <div key={movie.slug} className="movie">
+                    <p><strong>{movie.title}</strong> ({movie.year})</p>
+                    <img src={movie.imgUrl} alt={`${movie.title} poster`} />
+                    <p>{movie.overview}</p>
+                </div>
+            ))}
+        </div>
+    );
 }
 
-export default App
+export default App;
