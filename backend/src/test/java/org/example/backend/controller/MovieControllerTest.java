@@ -42,6 +42,7 @@ class MovieControllerTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("TMDB_API_KEY", () -> ("123"));
+        registry.add("NETZKINO_ENV", () -> ("456"));
     }
 
     @Test
