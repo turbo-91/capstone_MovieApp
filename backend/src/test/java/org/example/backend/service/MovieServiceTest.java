@@ -1,8 +1,7 @@
 package org.example.backend.service;
 
-import org.example.backend.dtos.netzkino.CustomFields;
-import org.example.backend.dtos.netzkino.NetzkinoResponse;
-import org.example.backend.dtos.netzkino.Post;
+import org.example.backend.dtos.netzkino.*;
+import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
@@ -227,5 +226,44 @@ class MovieServiceTest {
         verify(repo).save(any(Movie.class));
     }
 
+    @Test
+    void fetchAndStoreMovies_ShouldStoreMovieWithUnknownImdbId_WhenImdbIdIsMissing() {
+        // GIVEN
+        String query = "MissingImdbIdMovie";
+        CustomFields customFields = new CustomFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("2005"), null, null, null, null, null, null, null, null, null, null, null, null, null);
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
+        NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
+
+        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
+
+        // WHEN
+        List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
+
+        // THEN
+        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
+        Movie savedMovie = fetchedMovies.get(0);
+        assertEquals("UNKNOWN", savedMovie.imgUrl(), "Expected IMDb ID to be UNKNOWN");
+        verify(repo).save(savedMovie);
+    }
+
+    @Test
+    void fetchAndStoreMovies_ShouldStoreMovieWithDefaultYear_WhenYearIsInvalid() {
+        // GIVEN
+        String query = "InvalidYearMovie";
+        CustomFields customFields = new CustomFields(null, null,null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("InvalidYear"), null, null, null, null, null, null, null, null, null, null, null, null, null);
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
+        NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
+
+        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
+
+        // WHEN
+        List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
+
+        // THEN
+        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
+        Movie savedMovie = fetchedMovies.get(0);
+        assertEquals(0, savedMovie.year(), "Expected default year to be 0");
+        verify(repo).save(savedMovie);
+    }
 
 }

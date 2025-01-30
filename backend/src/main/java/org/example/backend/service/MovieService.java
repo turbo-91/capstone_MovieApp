@@ -123,10 +123,10 @@ public class MovieService {
             imdbId = "UNKNOWN"; // Assign a placeholder
         }
 
-        // Prevent TMDB API call if IMDb ID is "UNKNOWN"
+// Prevent TMDB API call if IMDb ID is "UNKNOWN"
         if ("UNKNOWN".equals(imdbId)) {
             System.out.println("Skipping TMDB API call for: " + title + " because IMDb ID is UNKNOWN.");
-            return new Movie(slug, title, year, overview, "N/A"); // Store without a poster
+            return new Movie(slug, title, year, overview, "UNKNOWN"); // Store without a poster
         }
 
         String imgUrl = fetchMoviePosterFromTmdb(imdbId, title); // see below
