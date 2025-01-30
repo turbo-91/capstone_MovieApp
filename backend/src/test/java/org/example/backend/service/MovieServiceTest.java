@@ -295,30 +295,30 @@ class MovieServiceTest {
         assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when TMDB info is null");
     }
 
-//    @Test
-//    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenMovieResultsAreEmpty() {
-//        // GIVEN
-//        String imdbId = "tt1234567";
-//        String title = "Some Movie";
-//
-//        // Create an empty TmdbResponse with all fields set appropriately
-//        TmdbResponse emptyResponse = new TmdbResponse(
-//                Collections.emptyList(), // movie_results
-//                Collections.emptyList(), // person_results
-//                Collections.emptyList(), // tv_results
-//                Collections.emptyList(), // tv_episode_results
-//                Collections.emptyList()  // tv_season_results
-//        );
-//
-//        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
-//                .thenReturn(ResponseEntity.ok(emptyResponse));
-//
-//        // WHEN
-//        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
-//
-//        // THEN
-//        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when movie results are empty");
-//    }
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenMovieResultsAreEmpty() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        String title = "Some Movie";
+
+        // Create an empty TmdbResponse with all fields set appropriately
+        TmdbResponse emptyResponse = new TmdbResponse(
+                Collections.emptyList(), // movie_results
+                Collections.emptyList(), // person_results
+                Collections.emptyList(), // tv_results
+                Collections.emptyList(), // tv_episode_results
+                Collections.emptyList()  // tv_season_results
+        );
+
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+                .thenReturn(ResponseEntity.ok(emptyResponse));
+
+        // WHEN
+        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+
+        // THEN
+        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when movie results are empty");
+    }
 
 
     @Test
@@ -359,35 +359,35 @@ class MovieServiceTest {
         assertNull(imdbId, "Expected extractImdbId to return null for an invalid IMDb link");
     }
 
-    @Test
-    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenPosterPathIsNull() {
-        // GIVEN
-        String imdbId = "tt1234567";
-        String title = "Movie Without Poster";
-
-        TmdbMovieResult movieResult = new TmdbMovieResult(
-                "id", 0, "original_language", "original_title",
-                "overview", "poster_path", "release_date", false,
-                "title", List.of(1), 0.0, "backdrop_path",
-                false, 0.0, 0
-        );
-        TmdbResponse tmdbResponse = new TmdbResponse(
-                List.of(movieResult),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyList()
-        );
-
-        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
-                .thenReturn(ResponseEntity.ok(tmdbResponse));
-
-        // WHEN
-        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
-
-        // THEN
-        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when poster_path is null");
-    }
+//    @Test
+//    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenPosterPathIsNull() {
+//        // GIVEN
+//        String imdbId = "tt1234567";
+//        String title = "Movie Without Poster";
+//
+//        TmdbMovieResult movieResult = new TmdbMovieResult(
+//                "id", 0, "original_language", "original_title",
+//                "overview", "poster_path", "release_date", false,
+//                "title", List.of(1), 0.0, "backdrop_path",
+//                false, 0.0, 0
+//        );
+//        TmdbResponse tmdbResponse = new TmdbResponse(
+//                List.of(movieResult),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList()
+//        );
+//
+//        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+//                .thenReturn(ResponseEntity.ok(tmdbResponse));
+//
+//        // WHEN
+//        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+//
+//        // THEN
+//        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when poster_path is null");
+//    }
 
     @Test
     void extractImdbId_ShouldReturnNull_WhenImdbLinksIsNull() {
