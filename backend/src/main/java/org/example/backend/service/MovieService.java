@@ -133,7 +133,7 @@ public class MovieService {
         return new Movie(slug, title, year, overview, imgUrl);
     }
 
-    private int extractYear(Post post) {
+    int extractYear(Post post) {
         try {
             return (post.custom_fields().Jahr() != null && !post.custom_fields().Jahr().isEmpty())
                     ? Integer.parseInt(post.custom_fields().Jahr().get(0))

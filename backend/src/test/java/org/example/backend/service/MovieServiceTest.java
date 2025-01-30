@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -358,9 +359,140 @@ class MovieServiceTest {
         assertNull(imdbId, "Expected extractImdbId to return null for an invalid IMDb link");
     }
 
+//    @Test
+//    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenPosterPathIsNull() {
+//        // GIVEN
+//        String imdbId = "tt1234567";
+//        String title = "Movie Without Poster";
+//
+//        TmdbMovieResult movieResult = new TmdbMovieResult(
+//                "id", 0, "original_language", "original_title",
+//                "overview", "poster_path", "release_date", false,
+//                "title", List.of(1), 0.0, "backdrop_path",
+//                false, 0.0, 0
+//        );
+//        TmdbResponse tmdbResponse = new TmdbResponse(
+//                List.of(movieResult),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList()
+//        );
+//
+//        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+//                .thenReturn(ResponseEntity.ok(tmdbResponse));
+//
+//        // WHEN
+//        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+//
+//        // THEN
+//        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when poster_path is null");
+//    }
+
+    @Test
+    void extractImdbId_ShouldReturnNull_WhenImdbLinksIsNull() {
+        // GIVEN
+        CustomFields customFields = new CustomFields(
+                Collections.emptyList(), // field1
+                Collections.emptyList(), // field2
+                Collections.emptyList(), // field3
+                "",                      // stringField
+                Collections.emptyList(), // field5
+                Collections.emptyList(), // field6
+                Collections.emptyList(), // field7
+                Collections.emptyList(), // field8
+                Collections.emptyList(), // field9
+                Collections.emptyList(), // field10
+                Collections.emptyList(), // field11
+                Collections.emptyList(), // field12
+                Collections.emptyList(), // field13
+                Collections.emptyList(), // field14
+                OffsetDateTime.now(),    // offsetStart
+                OffsetDateTime.now(),    // offsetEnd
+                Collections.emptyList(), // field17
+                "",                      // field18
+                "",                      // field19
+                false,                   // drm
+                Collections.emptyList(), // field21
+                Collections.emptyList(), // field22
+                Collections.emptyList(), // field23
+                Collections.emptyList(), // field24
+                Collections.emptyList(), // field25
+                Collections.emptyList(), // field26
+                Collections.emptyList(), // field27
+                Collections.emptyList(), // field28
+                Collections.emptyList(), // field29
+                Collections.emptyList(), // field30
+                Collections.emptyList(), // field31
+                Collections.emptyList(), // field32
+                Collections.emptyList(), // field33
+                Collections.emptyList(), // field34
+                Collections.emptyList(), // field35
+                Collections.emptyList(), // field36
+                Collections.emptyList(), // field37
+                Collections.emptyList(), // field38
+                Collections.emptyList() // field39
+        );
+
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, List.of(), null, customFields, List.of(), 1, true, 1, null);
+
+        // WHEN
+        String imdbId = movieService.extractImdbId(post);
+
+        // THEN
+        assertNull(imdbId, "Expected extractImdbId to return null when IMDb_Link is null");
+    }
 
 
+    @Test
+    void extractYear_ShouldReturnZero_WhenYearIsInvalid() {
+        // GIVEN
+        CustomFields customFields = new CustomFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, true, null, null, null, null, null, null, List.of("InvalidYear"), null, null, null, null, null, null, null, null, null, null, null, null);
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, List.of(), null, customFields, List.of(), 1, true, 1, null);
 
+        // WHEN
+        int year = movieService.extractYear(post);
 
+        // THEN
+        assertEquals(0, year, "Expected extractYear to return 0 for an invalid year format");
+    }
+
+    @Test
+    void processNetzkinoMovie_ShouldHandleUnknownImdbId() {
+        // GIVEN
+        CustomFields customFields = new CustomFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, true, null, null, null, null, null, null, List.of("InvalidYear"), null, null, null, null, null, null, null, null, null, null, null, null);
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, List.of(), null, customFields, List.of(), 1, true, 1, null);
+
+        // WHEN
+        Movie movie = movieService.processNetzkinoMovie(post);
+
+        // THEN
+        assertNotNull(movie, "Expected processNetzkinoMovie to create a Movie object");
+        assertEquals("UNKNOWN", movie.imgUrl(), "Expected imgUrl to be 'UNKNOWN' when IMDb ID is missing");
+    }
+
+//    @Test
+//    void processNetzkinoMovie_ShouldSetImgUrlToNA_WhenTmdbPosterIsNotFound() {
+//        // GIVEN
+//        CustomFields customFields = new CustomFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("2005"), List.of("https://www.imdb.com/title/tt1234567/"), null, null, null, null, null, null, null, null, null, null, null, null);
+//        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, List.of(), null, customFields, List.of(), 1, true, 1, null);
+//
+//        TmdbResponse tmdbResponse = new TmdbResponse(
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList()
+//        );
+//        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+//                .thenReturn(ResponseEntity.ok(tmdbResponse));
+//
+//        // WHEN
+//        Movie movie = movieService.processNetzkinoMovie(post);
+//
+//        // THEN
+//        assertNotNull(movie, "Expected processNetzkinoMovie to create a Movie object");
+//        assertEquals("N/A", movie.imgUrl(), "Expected imgUrl to be 'N/A' when TMDB poster is not found");
+//    }
 
 }
