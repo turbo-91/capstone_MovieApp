@@ -35,84 +35,7 @@ public class MovieService {
         this.netzkinoEnv=netzkinoEnv;
     }
 
-    public List<Movie> fetchAndStoreMovies(String query) {
-        System.out.println("Starting movie fetching process...");
-
-        String netzkinoUrl = String.format("%s?q=%s&d=%s", NETZKINO_URL, query, netzkinoEnv);
-        System.out.println("Generated Netzkino URL: " + netzkinoUrl);
-
-        ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
-        NetzkinoResponse response = netzkinoResponse.getBody();
-
-        if (response == null || response.posts().isEmpty()) {
-            System.out.println("No movies found from API 1.");
-            return Collections.emptyList();
-        }
-
-        System.out.println("Fetched " + response.posts().size() + " movies from API 1.");
-        List<Movie> fetchedMovies = new ArrayList<>();
-
-        for (Post netzkinoMovie : response.posts()) {
-            System.out.println("Processing movie: " + netzkinoMovie.title());
-
-            String slug = netzkinoMovie.slug();
-            String title = netzkinoMovie.title();
-            String overview = netzkinoMovie.content();
-            int year = 0;
-
-            if (netzkinoMovie.custom_fields() != null
-                    && netzkinoMovie.custom_fields().Jahr() != null
-                    && !netzkinoMovie.custom_fields().Jahr().isEmpty()) {
-                try {
-                    year = Integer.parseInt(netzkinoMovie.custom_fields().Jahr().get(0));
-                } catch (NumberFormatException e) {
-                    System.out.println("Error parsing year for: " + title);
-                    continue;
-                }
-            }
-
-            String imdbLink = (netzkinoMovie.custom_fields().IMDb_Link() != null && !netzkinoMovie.custom_fields().IMDb_Link().isEmpty())
-                    ? netzkinoMovie.custom_fields().IMDb_Link().get(0)
-                    : null;
-
-            if (imdbLink == null || !imdbLink.contains("/tt")) {
-                System.out.println("Skipping TMDB lookup, IMDb ID missing for: " + title);
-                continue;
-            }
-
-            String imdbId = imdbLink.substring(imdbLink.lastIndexOf("/tt") + 1);
-            System.out.println("Extracted IMDb ID: " + imdbId);
-
-            String tmdbUrl = String.format("https://api.themoviedb.org/3/find/%s?api_key=%s&language=en-US&external_source=imdb_id",
-                    imdbId, tmdbApiKey);
-
-            System.out.println("Fetching additional info from TMDB: " + tmdbUrl);
-
-            ResponseEntity<TmdbResponse> tmdbResponse = restTemplate.getForEntity(tmdbUrl, TmdbResponse.class);
-            TmdbResponse tmdbInfo = tmdbResponse.getBody();
-
-            if (tmdbInfo == null || tmdbInfo.movie_results().isEmpty()) {
-                System.out.println("No additional entry found in TMDB for movie: " + title);
-                continue;
-            }
-
-            TmdbMovieResult movieResult = tmdbInfo.movie_results().get(0);
-            String imgUrl = (movieResult.poster_path() != null)
-                    ? "https://image.tmdb.org/t/p/w500" + movieResult.poster_path()
-                    : "N/A";
-
-            System.out.println("Received additional info for " + title + ": " + imgUrl);
-
-            Movie movieToSave = new Movie(slug, title, year, overview, imgUrl);
-            movieRepo.save(movieToSave);
-            fetchedMovies.add(movieToSave);
-
-            System.out.println("Movie saved: " + movieToSave);
-        }
-
-        System.out.println("Finished processing all movies.");
-        return fetchedMovies;
-    }
+    // database interactions
 
     public List<Movie> getAllMovies() {
         try {
@@ -147,4 +70,106 @@ public class MovieService {
         }
         movieRepo.deleteBySlug(slug);
     }
+
+    // fetch on search functionality
+
+    public List<Movie> fetchAndStoreMovies(String query) {
+        System.out.println("Starting movie fetching process...");
+
+        String netzkinoUrl = String.format("%s?q=%s&d=%s", NETZKINO_URL, query, netzkinoEnv);
+        System.out.println("Generated Netzkino URL: " + netzkinoUrl);
+
+        ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
+        NetzkinoResponse response = netzkinoResponse.getBody();
+
+        if (response == null || response.posts().isEmpty()) {
+            System.out.println("No movies found from API 1.");
+            return Collections.emptyList();
+        }
+
+        System.out.println("Fetched " + response.posts().size() + " movies from API 1.");
+        List<Movie> fetchedMovies = new ArrayList<>();
+
+        for (Post post : response.posts()) {
+            Movie movie = processNetzkinoMovie(post); // see processing in helper function below
+            if (movie != null) {
+                movieRepo.save(movie);
+                fetchedMovies.add(movie);
+            }
+        }
+
+        System.out.println("Finished processing all movies.");
+        return fetchedMovies;
+    }
+
+    // Helper methods for fetchAndStoreMovies
+
+    private Movie processNetzkinoMovie(Post post) {
+        System.out.println("Processing movie: " + post.title());
+
+        if (post.custom_fields() == null) {
+            System.out.println("Skipping movie due to missing custom fields.");
+            return null;
+        }
+
+        String slug = post.slug();
+        String title = post.title();
+        String overview = post.content();
+        int year = extractYear(post); // see below
+        String imdbId = extractImdbId(post); // see below
+
+        if (imdbId == null) {
+            System.out.println("IMDb ID missing for: " + title + ", but movie will still be stored.");
+            imdbId = "UNKNOWN"; // Assign a placeholder
+        }
+
+        // Prevent TMDB API call if IMDb ID is "UNKNOWN"
+        if ("UNKNOWN".equals(imdbId)) {
+            System.out.println("Skipping TMDB API call for: " + title + " because IMDb ID is UNKNOWN.");
+            return new Movie(slug, title, year, overview, "N/A"); // Store without a poster
+        }
+
+        String imgUrl = fetchMoviePosterFromTmdb(imdbId, title); // see below
+        return new Movie(slug, title, year, overview, imgUrl);
+    }
+
+    private int extractYear(Post post) {
+        try {
+            return (post.custom_fields().Jahr() != null && !post.custom_fields().Jahr().isEmpty())
+                    ? Integer.parseInt(post.custom_fields().Jahr().get(0))
+                    : 0;
+        } catch (NumberFormatException e) {
+            System.out.println("Error parsing year for: " + post.title());
+            return 0;
+        }
+    }
+
+    private String extractImdbId(Post post) {
+        List<String> imdbLinks = post.custom_fields().IMDb_Link();
+        if (imdbLinks == null || imdbLinks.isEmpty()) {
+            return null;
+        }
+
+        String imdbLink = imdbLinks.get(0);
+        return imdbLink.contains("/tt") ? imdbLink.substring(imdbLink.lastIndexOf("/tt") + 1) : null;
+    }
+
+    private String fetchMoviePosterFromTmdb(String imdbId, String title) {
+        String tmdbUrl = String.format("https://api.themoviedb.org/3/find/%s?api_key=%s&language=en-US&external_source=imdb_id",
+                imdbId, tmdbApiKey);
+
+        System.out.println("Fetching additional info from TMDB: " + tmdbUrl);
+
+        ResponseEntity<TmdbResponse> tmdbResponse = restTemplate.getForEntity(tmdbUrl, TmdbResponse.class);
+        TmdbResponse tmdbInfo = tmdbResponse.getBody();
+
+        if (tmdbInfo == null || tmdbInfo.movie_results().isEmpty()) {
+            System.out.println("No additional entry found in TMDB for movie: " + title);
+            return "N/A";
+        }
+
+        TmdbMovieResult movieResult = tmdbInfo.movie_results().get(0);
+        return (movieResult.poster_path() != null) ? "https://image.tmdb.org/t/p/w500" + movieResult.poster_path() : "N/A";
+    }
+
 }
