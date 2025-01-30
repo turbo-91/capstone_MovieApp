@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -265,5 +266,101 @@ class MovieServiceTest {
         assertEquals(0, savedMovie.year(), "Expected default year to be 0");
         verify(repo).save(savedMovie);
     }
+
+    @Test
+    void processNetzkinoMovie_ShouldReturnNull_WhenCustomFieldsAreNull() {
+        // GIVEN
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, null, null, null, null, 1, true, 1, null);
+
+        // WHEN
+        Movie result = movieService.processNetzkinoMovie(post);
+
+        // THEN
+        assertNull(result, "Expected processNetzkinoMovie to return null when custom fields are null");
+    }
+
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenTmdbInfoIsNull() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        String title = "Some Movie";
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+                .thenReturn(ResponseEntity.ok(null));
+
+        // WHEN
+        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+
+        // THEN
+        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when TMDB info is null");
+    }
+
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenMovieResultsAreEmpty() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        String title = "Some Movie";
+
+        // Create an empty TmdbResponse with all fields set appropriately
+        TmdbResponse emptyResponse = new TmdbResponse(
+                Collections.emptyList(), // movie_results
+                Collections.emptyList(), // person_results
+                Collections.emptyList(), // tv_results
+                Collections.emptyList(), // tv_episode_results
+                Collections.emptyList()  // tv_season_results
+        );
+
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+                .thenReturn(ResponseEntity.ok(emptyResponse));
+
+        // WHEN
+        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+
+        // THEN
+        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when movie results are empty");
+    }
+
+
+    @Test
+    void fetchAndStoreMovies_ShouldReturnEmptyList_WhenNetzkinoResponseIsEmpty() {
+        // GIVEN
+        String query = "NoMovies";
+        NetzkinoResponse emptyResponse = new NetzkinoResponse(null, null, null, 0, 0, 0, null, Collections.emptyList(), null, 0, 0);
+        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
+                .thenReturn(ResponseEntity.ok(emptyResponse));
+
+        // WHEN
+        List<Movie> result = movieService.fetchAndStoreMovies(query);
+
+        // THEN
+        assertTrue(result.isEmpty(), "Expected fetchAndStoreMovies to return an empty list when API returns no movies");
+    }
+
+    @Test
+    void getAllMovies_ShouldThrowRuntimeException_WhenDatabaseFetchFails() {
+        // GIVEN
+        when(repo.findAll()).thenThrow(new RuntimeException("Database error"));
+
+        // WHEN & THEN
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> movieService.getAllMovies());
+        assertEquals("Failed to fetch movies from the database.", exception.getMessage());
+    }
+
+    @Test
+    void extractImdbId_ShouldReturnNull_WhenImdbLinkIsInvalid() {
+        // GIVEN
+        CustomFields customFields = new CustomFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("invalid_imdb_link"), null, null, null, null, null, null, null, null, null, null, null, null, null);
+        Post post = new Post(1, "slug", "Title", "Overview", null, null, null, List.of(), null, customFields, List.of(), 1, true, 1, null);
+
+        // WHEN
+        String imdbId = movieService.extractImdbId(post);
+
+        // THEN
+        assertNull(imdbId, "Expected extractImdbId to return null for an invalid IMDb link");
+    }
+
+
+
+
+
 
 }

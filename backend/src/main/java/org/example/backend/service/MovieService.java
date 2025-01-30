@@ -104,7 +104,7 @@ public class MovieService {
 
     // Helper methods for fetchAndStoreMovies
 
-    private Movie processNetzkinoMovie(Post post) {
+    Movie processNetzkinoMovie(Post post) {
         System.out.println("Processing movie: " + post.title());
 
         if (post.custom_fields() == null) {
@@ -144,7 +144,7 @@ public class MovieService {
         }
     }
 
-    private String extractImdbId(Post post) {
+    String extractImdbId(Post post) {
         List<String> imdbLinks = post.custom_fields().IMDb_Link();
         if (imdbLinks == null || imdbLinks.isEmpty()) {
             return null;
@@ -154,7 +154,7 @@ public class MovieService {
         return imdbLink.contains("/tt") ? imdbLink.substring(imdbLink.lastIndexOf("/tt") + 1) : null;
     }
 
-    private String fetchMoviePosterFromTmdb(String imdbId, String title) {
+    String fetchMoviePosterFromTmdb(String imdbId, String title) {
         String tmdbUrl = String.format("https://api.themoviedb.org/3/find/%s?api_key=%s&language=en-US&external_source=imdb_id",
                 imdbId, tmdbApiKey);
 
