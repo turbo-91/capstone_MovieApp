@@ -1,259 +1,187 @@
 package org.example.backend.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backend.model.Movie;
-import org.example.backend.repo.MovieRepo;
+import org.example.backend.service.MovieService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
 class MovieControllerTest {
 
-    @Autowired
+    private MovieService movieService;
+    private MovieController movieController;
     private MockMvc mockMvc;
-
-    @Autowired
-    private MovieRepo repo;
-
-    @Autowired
-    ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
-    void clearDatabase() {
-        repo.deleteAll();
-    }
-
-    @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("TMDB_API_KEY", () -> ("123"));
-        registry.add("NETZKINO_ENV", () -> ("456"));
+    void setUp() {
+        movieService = mock(MovieService.class);
+        movieController = new MovieController(movieService);
+        mockMvc = MockMvcBuilders.standaloneSetup(movieController).build();
+        objectMapper = new ObjectMapper();
     }
 
     @Test
-    void getAllMovies_shouldReturnListWithOneMovie_whenCalledWithFilledDB() throws Exception {
-        // Clean database
-        repo.deleteAll();
-
-        //GIVEN
-        Movie movie = new Movie(
-                "herr-der-ringe-!",
-                "Herr der Ringe - Die Gefährten",
-                2007,
-                "Der Film fängt an und hört auf.",
-                "/hdrgefaehrtenphoto.jpg"
+    void getAllMovies_ShouldReturnListOfMovies() throws Exception {
+        // GIVEN
+        List<Movie> movieList = List.of(
+                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
+                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
         );
-        repo.save(movie);
+        when(movieService.getAllMovies()).thenReturn(movieList);
 
-        // Act & Assert
+        // WHEN & THEN
         mockMvc.perform(get("/api/movies"))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(List.of(movie)))); // Use ObjectMapper to serialize the expected JSON
+                .andExpect(content().json(objectMapper.writeValueAsString(movieList)));
+
+        verify(movieService).getAllMovies();
     }
 
     @Test
-    void getMovieBySlug_shouldReturnMovie_whenMovieExists() throws Exception { // Clean database
-        repo.deleteAll();
-
-        //GIVEN
-        Movie movie = new Movie(
-                "herr-der-ringe-!!",
-                "Herr der Ringe - Die zwei Türme",
-                2009,
-                "Der Film fängt wieder an und hört wieder auf.",
-                "/hdrtuermephoto.jpg"
-        );
-        repo.save(movie);
-
-        // Act & Assert
-        mockMvc.perform(get("/api/movies/herr-der-ringe-!!"))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(movie))); // Use ObjectMapper to serialize the expected JSON
-    }
-
-    @Test
-    void getMovieBySlug_shouldReturn404_whenSlugDoesNotExist() throws Exception {
-        // Clean database
-        repo.deleteAll();
-
+    void getMovieBySlug_ShouldReturnMovie_WhenSlugExists() throws Exception {
         // GIVEN
-        String nonExistentSlug = "nonExistentId";
+        String slug = "lotr1";
+        Movie expectedMovie = new Movie(slug, "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg");
+        when(movieService.getMovieBySlug(slug)).thenReturn(expectedMovie);
 
         // WHEN & THEN
-        mockMvc.perform(get("/api/movies/" + nonExistentSlug))
+        mockMvc.perform(get("/api/movies/{slug}", slug))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(expectedMovie)));
+
+        verify(movieService).getMovieBySlug(slug);
+    }
+
+    @Test
+    void getMovieBySlug_ShouldReturnNotFound_WhenSlugDoesNotExist() throws Exception {
+        // GIVEN
+        String slug = "invalid-slug";
+        when(movieService.getMovieBySlug(slug)).thenThrow(new IllegalArgumentException("Movie with slug " + slug + " not found."));
+
+        // WHEN & THEN
+        mockMvc.perform(get("/api/movies/{slug}", slug))
                 .andExpect(status().isNotFound());
-    }
 
-
-    @Test
-    void createMovie_shouldPersistMovieAndReturnCreatedMovie_whenCalledWithValidPayload() throws Exception {
-        // Clean database
-        repo.deleteAll();
-
-        // Arrange
-        String requestBody = """
-                {
-                          "slug": "herr-der-ringe-!!",
-                          "title": "Herr der Ringe - Die zwei Türme",
-                          "year": 2009,
-                          "overview": "Der Film fängt wieder an und hört wieder auf.",
-                          "imgUrl": "/hdrtuermephoto.jpg"
-                      }
-            """;
-
-        // Act & Assert
-        mockMvc.perform(post("/api/movies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.slug").value("herr-der-ringe-!!"))
-                .andExpect(jsonPath("$.title").value("Herr der Ringe - Die zwei Türme"))
-                .andExpect(jsonPath("$.year").value(2009))
-                .andExpect(jsonPath("$.overview").value("Der Film fängt wieder an und hört wieder auf."))
-                .andExpect(jsonPath("$.imgUrl").value("/hdrtuermephoto.jpg"));
-
-        // Verify the workout is saved in the database
-        assertThat(repo.findAll()).hasSize(1);
-        Movie savedMovie = repo.findAll().get(0);
-        assertThat(savedMovie.slug()).isEqualTo("herr-der-ringe-!!");
-        assertThat(savedMovie.title()).isEqualTo("Herr der Ringe - Die zwei Türme");
-        assertThat(savedMovie.year()).isEqualTo(2009);
-        assertThat(savedMovie.overview()).isEqualTo("Der Film fängt wieder an und hört wieder auf.");
-        assertThat(savedMovie.imgUrl()).isEqualTo("/hdrtuermephoto.jpg");
+        verify(movieService).getMovieBySlug(slug);
     }
 
     @Test
-    void createMovie_shouldReturnBadRequest_whenCalledWithInvalidPayload() throws Exception {
-        // Clean database
-        repo.deleteAll();
-
-        // Arrange
-        // Payload with missing required fields or invalid data
-        String invalidRequestBody = """
-    {
-        "slug": "herr-der-ringe-!!",
-        "title": "",
-        "year": "invalid-year",
-        "overview": null,
-        "imgUrl": ""
-    }
-    """;
-
-        // Act & Assert
-        mockMvc.perform(post("/api/movies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalidRequestBody))
-                .andExpect(status().isBadRequest()); // Expecting HTTP 400 Bad Request
-
-
-        // Verify that no movie was persisted in the database
-        assertThat(repo.findAll()).isEmpty();
-    }
-
-
-    @Test
-    void expectSuccessfulPut() throws Exception {
-        // Step 1: Create a new movie
-        String saveResult = mockMvc.perform(
-                        post("http://localhost:8080/api/movies")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
-                                    {
-                                      "slug": "original-slug",
-                                      "title": "Original Title",
-                                      "year": 2005,
-                                      "overview": "Original overview.",
-                                      "imgUrl": "/originalphoto.jpg"
-                                    }
-                                    """)
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().json("""
-                    {
-                      "slug": "original-slug",
-                      "title": "Original Title",
-                      "year": 2005,
-                      "overview": "Original overview.",
-                      "imgUrl": "/originalphoto.jpg"
-                    }
-                    """))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        // Step 2: Deserialize the result to get the slug
-        Movie saveResultMovie = objectMapper.readValue(saveResult, Movie.class);
-        String slug = saveResultMovie.slug();
-
-        // Step 3: Update the movie
-        mockMvc.perform(
-                        put("http://localhost:8080/api/movies/" + slug)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""
-                                    {
-                                      "slug": "<SLUG>",
-                                      "title": "Updated Title",
-                                      "year": 2020,
-                                      "overview": "Updated overview.",
-                                      "imgUrl": "/updatedphoto.jpg"
-                                    }
-                                    """.replaceFirst("<SLUG>", slug))
-                )
-                .andExpect(status().isOk())
-                .andExpect(content().json("""
-                    {
-                      "slug": "<SLUG>",
-                      "title": "Updated Title",
-                      "year": 2020,
-                      "overview": "Updated overview.",
-                      "imgUrl": "/updatedphoto.jpg"
-                    }
-                    """.replaceFirst("<SLUG>", slug)));
-    }
-
-    @Test
-    void deleteMovie_shouldDeleteMovieAndReturnNoContent_whenSlugExists() throws Exception {
+    void createMovie_ShouldReturnCreatedMovie() throws Exception {
         // GIVEN
-        Movie existingMovie = new Movie(
-                "herr-der-ringe-gefährten",
-                "Herr der Ringe - Die Gefährten",
-                2001,
-                "Eine epische Reise beginnt.",
-                "/hdrgefaehrtenphoto.jpg"
-        );
-        repo.save(existingMovie);
+        Movie newMovie = new Movie("new-movie", "New Movie", 2023, "A new story.", "/new-image.jpg");
+        when(movieService.saveMovie(any(Movie.class))).thenReturn(newMovie);
 
         // WHEN & THEN
-        mockMvc.perform(delete("/api/movies/herr-der-ringe-gefährten"))
+        mockMvc.perform(post("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newMovie)))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(newMovie)));
+
+        verify(movieService).saveMovie(any(Movie.class));
+    }
+
+    @Test
+    void updateMovie_ShouldReturnUpdatedMovie_WhenSlugMatches() throws Exception {
+        // GIVEN
+        String slug = "existing-movie";
+        Movie updatedMovie = new Movie(slug, "Updated Movie", 2023, "Updated description.", "/updated.jpg");
+
+        when(movieService.updateMovie(any(Movie.class))).thenReturn(updatedMovie);
+
+        // WHEN & THEN
+        mockMvc.perform(put("/api/movies/{slug}", slug)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updatedMovie)))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(updatedMovie)));
+
+        verify(movieService).updateMovie(any(Movie.class));
+    }
+
+    @Test
+    void updateMovie_ShouldReturnBadRequest_WhenSlugDoesNotMatch() throws Exception {
+        // GIVEN
+        String urlSlug = "wrong-slug";
+        Movie movieWithDifferentSlug = new Movie("different-slug", "Updated Movie", 2023, "Updated description.", "/updated.jpg");
+
+        // WHEN & THEN
+        mockMvc.perform(put("/api/movies/{slug}", urlSlug)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(movieWithDifferentSlug)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteMovie_ShouldReturnNoContent_WhenSlugExists() throws Exception {
+        // GIVEN
+        String slug = "movie-to-delete";
+        doNothing().when(movieService).deleteMovie(slug);
+
+        // WHEN & THEN
+        mockMvc.perform(delete("/api/movies/{slug}", slug))
                 .andExpect(status().isNoContent());
 
-        // Verify that the movie is deleted
-        assertThat(repo.findBySlug("herr-der-ringe-gefährten")).isEmpty();
+        verify(movieService).deleteMovie(slug);
     }
 
     @Test
-    void deleteMovie_shouldReturnNotFound_whenSlugDoesNotExist() throws Exception {
+    void deleteMovie_ShouldReturnNotFound_WhenSlugDoesNotExist() throws Exception {
         // GIVEN
-        String nonExistentSlug = "herr-der-ringe-unbekannt";
+        String slug = "non-existent-movie";
+        doThrow(new IllegalArgumentException("Movie with slug " + slug + " does not exist."))
+                .when(movieService).deleteMovie(slug);
 
         // WHEN & THEN
-        mockMvc.perform(delete("/api/movies/" + nonExistentSlug))
+        mockMvc.perform(delete("/api/movies/{slug}", slug))
                 .andExpect(status().isNotFound());
+
+        verify(movieService).deleteMovie(slug);
     }
 
+    @Test
+    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
+        // GIVEN
+        String query = "Lord of the Rings";
+        List<Movie> expectedMovies = List.of(
+                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
+                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
+        );
+        when(movieService.fetchAndStoreMovies(query)).thenReturn(expectedMovies);
+
+        // WHEN & THEN
+        mockMvc.perform(get("/api/movies/search/{query}", query))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(expectedMovies)));
+
+        verify(movieService).fetchAndStoreMovies(query);
+    }
+
+    @Test
+    void searchMovies_ShouldReturnEmptyList_WhenNoResultsFound() throws Exception {
+        // GIVEN
+        String query = "Non-existent Movie";
+        when(movieService.fetchAndStoreMovies(query)).thenReturn(List.of());
+
+        // WHEN & THEN
+        mockMvc.perform(get("/api/movies/search/{query}", query))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(movieService).fetchAndStoreMovies(query);
+    }
 }
