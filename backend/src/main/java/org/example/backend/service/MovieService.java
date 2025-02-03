@@ -162,8 +162,13 @@ public List<Movie> getAllMovies() {
     }
 
     String fetchMoviePosterFromTmdb(String imdbId, String title) {
-        String tmdbUrl = String.format("https://api.themoviedb.org/3/find/%s?api_key=%s&language=en-US&external_source=imdb_id",
-                imdbId, tmdbApiKey);
+String tmdbUrl = UriComponentsBuilder
+    .fromHttpUrl(TMDB_BASE_URL)
+    .pathSegment(imdbId)
+    .queryParam("api_key", tmdbApiKey)
+    .queryParam("language", "en-US")
+    .queryParam("external_source", "imdb_id")
+    .toUriString();
 
         System.out.println("Fetching additional info from TMDB: " + tmdbUrl);
 
