@@ -37,8 +37,8 @@ public class MovieService {
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
 
-    // Guava RateLimiter set to allow 1 request per second (i.e. 60 per minute)
-    private final RateLimiter rateLimiter = RateLimiter.create(1.0);
+    // Guava RateLimiter set to allow 50 requests per second
+    private final RateLimiter rateLimiter = RateLimiter.create(50.0);
 
     public MovieService(MovieRepo movieRepo, RestTemplate restTemplate, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv ) {
         this.movieRepo = movieRepo;
@@ -121,14 +121,19 @@ public List<Movie> getAllMovies() {
         }
 
         if (!fetchedMovies.isEmpty()) {
-            // Update search queries for existing movies
+            // ✅ Prevent duplicate inserts
             for (Movie movie : fetchedMovies) {
                 Optional<Movie> existingMovie = movieRepo.findBySlug(movie.slug());
+
                 if (existingMovie.isPresent()) {
+                    // ✅ If movie exists, update its search queries instead of inserting a duplicate
                     Movie updatedMovie = addQueryToMovie(existingMovie.get(), query);
                     movieRepo.save(updatedMovie);
+                    System.out.println("Updated existing movie: " + movie.slug());
                 } else {
+                    // ✅ Only save new movies
                     movieRepo.save(movie);
+                    System.out.println("Saved new movie: " + movie.slug());
                 }
             }
         }
