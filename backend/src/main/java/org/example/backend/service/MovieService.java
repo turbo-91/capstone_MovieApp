@@ -2,14 +2,18 @@ package org.example.backend.service;
 
 import org.example.backend.dtos.netzkino.Post;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
+import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.dtos.netzkino.NetzkinoResponse;
 import org.example.backend.dtos.tmdb.TmdbResponse;
 import org.example.backend.repo.MovieRepo;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,20 +43,12 @@ public class MovieService {
 public List<Movie> getAllMovies() {
     try {
         List<Movie> movies = movieRepo.findAll();
+        System.out.println("Service: Fetched all movies: " + movies);
         return movies;
     } catch (DataAccessException e) {
         throw new DatabaseException("Failed to fetch movies", e);
     }
 }
-    public List<Movie> getAllMovies() {
-        try {
-            List<Movie> movies = movieRepo.findAll();
-            System.out.println("Service: Fetched all movies: " + movies);
-            return movies;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch movies from the database.", e);
-        }
-    }
 
     public Movie getMovieBySlug(String slug) {
         return movieRepo.findBySlug(slug)
@@ -89,8 +85,8 @@ public List<Movie> getAllMovies() {
         ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
         NetzkinoResponse response = netzkinoResponse.getBody();
 
-        if (response == null || response.posts() == null || response.posts().isEmpty()) {           
-            logger.warn("No movies found from API 1.");
+        if (response == null || response.posts() == null || response.posts().isEmpty()) {
+            System.out.println("No movies found from API 1.");
             return Collections.emptyList();
         }
 
