@@ -89,8 +89,8 @@ public List<Movie> getAllMovies() {
         ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
         NetzkinoResponse response = netzkinoResponse.getBody();
 
-        if (response == null || response.posts().isEmpty()) {
-            System.out.println("No movies found from API 1.");
+        if (response == null || response.posts() == null || response.posts().isEmpty()) {           
+            logger.warn("No movies found from API 1.");
             return Collections.emptyList();
         }
 
