@@ -1,5 +1,6 @@
 package org.example.backend.service;
 
+import com.google.common.util.concurrent.RateLimiter;
 import org.example.backend.dtos.netzkino.Post;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.exceptions.DatabaseException;
@@ -35,6 +36,9 @@ public class MovieService {
     private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
+
+    // Guava RateLimiter set to allow 1 request per second (i.e. 60 per minute)
+    private final RateLimiter rateLimiter = RateLimiter.create(1.0);
 
     public MovieService(MovieRepo movieRepo, RestTemplate restTemplate, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv ) {
         this.movieRepo = movieRepo;
@@ -96,7 +100,9 @@ public List<Movie> getAllMovies() {
         }
 
         // If no cached/DB match → Call external API
+        // Build the URL for Netzkino API
         String netzkinoUrl = String.format("%s?q=%s&d=%s", NETZKINO_URL, query, netzkinoEnv);
+        rateLimiter.acquire();
         ResponseEntity<NetzkinoResponse> netzkinoResponse = restTemplate.getForEntity(netzkinoUrl, NetzkinoResponse.class);
         NetzkinoResponse response = netzkinoResponse.getBody();
 
@@ -197,6 +203,7 @@ String tmdbUrl = UriComponentsBuilder
 
         System.out.println("Fetching additional info from TMDB: " + tmdbUrl);
 
+        rateLimiter.acquire();
         ResponseEntity<TmdbResponse> tmdbResponse = restTemplate.getForEntity(tmdbUrl, TmdbResponse.class);
         TmdbResponse tmdbInfo = tmdbResponse.getBody();
 
