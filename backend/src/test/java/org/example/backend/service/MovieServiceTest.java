@@ -3,10 +3,12 @@ package org.example.backend.service;
 import org.example.backend.dtos.netzkino.*;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
+import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.client.RestTemplate;
@@ -208,6 +210,7 @@ class MovieServiceTest {
                 null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0
         );
 
+        // Mock the API response
         when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
                 .thenReturn(ResponseEntity.ok(netzkinoResponse));
 
@@ -219,13 +222,21 @@ class MovieServiceTest {
 
         // THEN
         System.out.println("Number of movies returned: " + fetchedMovies.size());
-
         for (Movie movie : fetchedMovies) {
             System.out.println("Stored movie: " + movie.title() + ", Year: " + movie.year());
         }
 
         assertEquals(1, fetchedMovies.size(), "The number of stored movies should be 1");
-        verify(repo).save(any(Movie.class));
+
+        // Verify the attributes of the saved movie
+        Movie savedMovie = fetchedMovies.get(0);
+        assertEquals("lotr", savedMovie.slug(), "Expected slug to match");
+        assertEquals("Lord of the Rings", savedMovie.title(), "Expected title to match");
+        assertEquals("Epic fantasy.", savedMovie.overview(), "Expected overview to match");
+        assertEquals(2001, savedMovie.year(), "Expected year to match");
+
+        // Verify the batch save method was called with the correct list
+        verify(repo).saveAll(fetchedMovies);
     }
 
     @Test
@@ -236,37 +247,70 @@ class MovieServiceTest {
         Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
         NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
 
+        // Mock the API call
         when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
 
         // WHEN
         List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
 
         // THEN
-        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
+        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be fetched and saved");
+
+        // Verify the attributes of the saved movie
         Movie savedMovie = fetchedMovies.get(0);
+        assertEquals("slug", savedMovie.slug(), "Expected slug to match");
+        assertEquals("Title", savedMovie.title(), "Expected title to match");
+        assertEquals("Overview", savedMovie.overview(), "Expected overview to match");
         assertEquals("UNKNOWN", savedMovie.imgUrl(), "Expected IMDb ID to be UNKNOWN");
-        verify(repo).save(savedMovie);
+
+        // Verify the batch save method was called with the correct list
+        verify(repo).saveAll(fetchedMovies);
     }
 
     @Test
     void fetchAndStoreMovies_ShouldStoreMovieWithDefaultYear_WhenYearIsInvalid() {
         // GIVEN
         String query = "InvalidYearMovie";
-        CustomFields customFields = new CustomFields(null, null,null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("InvalidYear"), null, null, null, null, null, null, null, null, null, null, null, null, null);
-        Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
-        NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
 
+        // Create custom fields with an invalid year
+        CustomFields customFields = new CustomFields(
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, false, null, null, null, null, null, List.of("InvalidYear"),
+                null, null, null, null, null, null, null, null, null, null, null, null, null
+        );
+
+        // Create a post with invalid year
+        Post post = new Post(
+                1, "slug", "Title", "Overview", null, null,
+                new Author("AuthorName"), List.of(), null, customFields, List.of(),
+                1, true, 1, new Match("title", 0, query, query.length())
+        );
+
+        // Create a NetzkinoResponse with the post
+        NetzkinoResponse response = new NetzkinoResponse(
+                null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0
+        );
+
+        // Mock the API call
         when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
 
         // WHEN
         List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
 
         // THEN
-        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
+        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be fetched and saved");
+
+        // Verify the attributes of the saved movie
         Movie savedMovie = fetchedMovies.get(0);
+        assertEquals("slug", savedMovie.slug(), "Expected slug to match");
+        assertEquals("Title", savedMovie.title(), "Expected title to match");
+        assertEquals("Overview", savedMovie.overview(), "Expected overview to match");
         assertEquals(0, savedMovie.year(), "Expected default year to be 0");
-        verify(repo).save(savedMovie);
+
+        // Verify the batch save method was called with the correct list
+        verify(repo).saveAll(fetchedMovies);
     }
+
 
     @Test
     void processNetzkinoMovie_ShouldReturnNull_WhenCustomFieldsAreNull() {
@@ -337,14 +381,17 @@ class MovieServiceTest {
     }
 
     @Test
-    void getAllMovies_ShouldThrowRuntimeException_WhenDatabaseFetchFails() {
+    void getAllMovies_ShouldThrowDatabaseException_WhenDatabaseFetchFails() {
         // GIVEN
-        when(repo.findAll()).thenThrow(new RuntimeException("Database error"));
+        when(repo.findAll()).thenThrow(new DataAccessException("Database error") {});
 
         // WHEN & THEN
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> movieService.getAllMovies());
-        assertEquals("Failed to fetch movies from the database.", exception.getMessage());
+        DatabaseException exception = assertThrows(DatabaseException.class, () -> movieService.getAllMovies());
+        assertEquals("Failed to fetch movies", exception.getMessage(), "Expected a specific exception message");
+        assertNotNull(exception.getCause(), "Exception cause should not be null");
+        assertEquals("Database error", exception.getCause().getMessage(), "Expected cause message to match the thrown exception");
     }
+
 
     @Test
     void extractImdbId_ShouldReturnNull_WhenImdbLinkIsInvalid() {

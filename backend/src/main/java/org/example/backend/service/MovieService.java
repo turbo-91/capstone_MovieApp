@@ -94,12 +94,15 @@ public List<Movie> getAllMovies() {
         List<Movie> fetchedMovies = new ArrayList<>();
 
         for (Post post : response.posts()) {
-            Movie movie = processNetzkinoMovie(post); // see processing in helper function below
+            Movie movie = processNetzkinoMovie(post); // Process movie
             if (movie != null) {
-                movieRepo.save(movie);
-                fetchedMovies.add(movie);
+                fetchedMovies.add(movie); // Collect the movie
             }
         }
+        if (!fetchedMovies.isEmpty()) {
+            movieRepo.saveAll(fetchedMovies); // Save all movies after the loop
+        }
+
 
         System.out.println("Finished processing all movies.");
         return fetchedMovies;
