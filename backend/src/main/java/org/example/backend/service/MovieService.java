@@ -36,7 +36,14 @@ public class MovieService {
     }
 
     // database interactions
-
+public List<Movie> getAllMovies() {
+    try {
+        List<Movie> movies = movieRepo.findAll();
+        return movies;
+    } catch (DataAccessException e) {
+        throw new DatabaseException("Failed to fetch movies", e);
+    }
+}
     public List<Movie> getAllMovies() {
         try {
             List<Movie> movies = movieRepo.findAll();
