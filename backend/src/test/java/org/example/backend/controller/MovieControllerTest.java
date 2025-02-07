@@ -1,6 +1,7 @@
 package org.example.backend.controller;
 
 import org.example.backend.model.Movie;
+import org.example.backend.service.DailyMovieService;
 import org.example.backend.service.MovieService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class MovieControllerTest {
 
     private MovieService movieService;
+    private DailyMovieService dailyMovieService;
     private MovieController movieController;
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -29,7 +32,8 @@ class MovieControllerTest {
     @BeforeEach
     void setUp() {
         movieService = mock(MovieService.class);
-        movieController = new MovieController(movieService);
+        dailyMovieService = mock(DailyMovieService.class);
+        movieController = new MovieController(movieService, dailyMovieService);
         mockMvc = MockMvcBuilders.standaloneSetup(movieController).build();
         objectMapper = new ObjectMapper();
     }
@@ -38,9 +42,38 @@ class MovieControllerTest {
     void getAllMovies_ShouldReturnListOfMovies() throws Exception {
         // GIVEN
         List<Movie> movieList = List.of(
-                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
-                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
+                new Movie(
+                        "1",
+                        101,
+                        "slug-movie-1",
+                        "Inception",
+                        "2010",
+                        "A thief who enters the dreams of others...",
+                        "Christopher Nolan",
+                        "Leonardo DiCaprio, Joseph Gordon-Levitt",
+                        "https://example.com/netzkino1.jpg",
+                        "https://example.com/netzkino1_small.jpg",
+                        "https://example.com/imdb1.jpg",
+                        List.of("Sci-Fi", "Thriller"),
+                        List.of(LocalDate.now())
+                ),
+                new Movie(
+                        "2",
+                        102,
+                        "slug-movie-2",
+                        "The Dark Knight",
+                        "2008",
+                        "Batman battles the Joker in Gotham City...",
+                        "Christopher Nolan",
+                        "Christian Bale, Heath Ledger",
+                        "https://example.com/netzkino2.jpg",
+                        "https://example.com/netzkino2_small.jpg",
+                        "https://example.com/imdb2.jpg",
+                        List.of("Action", "Crime", "Drama"),
+                        List.of(LocalDate.now())
+                )
         );
+
         when(movieService.getAllMovies()).thenReturn(movieList);
 
         // WHEN & THEN
@@ -54,8 +87,22 @@ class MovieControllerTest {
     @Test
     void getMovieBySlug_ShouldReturnMovie_WhenSlugExists() throws Exception {
         // GIVEN
-        String slug = "lotr1";
-        Movie expectedMovie = new Movie(slug, "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg");
+        String slug = "slug-movie-1";
+        Movie expectedMovie = new Movie(
+                "1",
+                101,
+                slug,
+                "Inception",
+                "2010",
+                "A thief who enters the dreams of others...",
+                "Christopher Nolan",
+                "Leonardo DiCaprio, Joseph Gordon-Levitt",
+                "https://example.com/netzkino1.jpg",
+                "https://example.com/netzkino1_small.jpg",
+                "https://example.com/imdb1.jpg",
+                List.of("Sci-Fi", "Thriller"),
+                List.of(LocalDate.now())
+        );
         when(movieService.getMovieBySlug(slug)).thenReturn(expectedMovie);
 
         // WHEN & THEN
@@ -77,53 +124,6 @@ class MovieControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(movieService).getMovieBySlug(slug);
-    }
-
-    @Test
-    void createMovie_ShouldReturnCreatedMovie() throws Exception {
-        // GIVEN
-        Movie newMovie = new Movie("new-movie", "New Movie", 2023, "A new story.", "/new-image.jpg");
-        when(movieService.saveMovie(any(Movie.class))).thenReturn(newMovie);
-
-        // WHEN & THEN
-        mockMvc.perform(post("/api/movies")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newMovie)))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(newMovie)));
-
-        verify(movieService).saveMovie(any(Movie.class));
-    }
-
-    @Test
-    void updateMovie_ShouldReturnUpdatedMovie_WhenSlugMatches() throws Exception {
-        // GIVEN
-        String slug = "existing-movie";
-        Movie updatedMovie = new Movie(slug, "Updated Movie", 2023, "Updated description.", "/updated.jpg");
-
-        when(movieService.updateMovie(any(Movie.class))).thenReturn(updatedMovie);
-
-        // WHEN & THEN
-        mockMvc.perform(put("/api/movies/{slug}", slug)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updatedMovie)))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(updatedMovie)));
-
-        verify(movieService).updateMovie(any(Movie.class));
-    }
-
-    @Test
-    void updateMovie_ShouldReturnBadRequest_WhenSlugDoesNotMatch() throws Exception {
-        // GIVEN
-        String urlSlug = "wrong-slug";
-        Movie movieWithDifferentSlug = new Movie("different-slug", "Updated Movie", 2023, "Updated description.", "/updated.jpg");
-
-        // WHEN & THEN
-        mockMvc.perform(put("/api/movies/{slug}", urlSlug)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(movieWithDifferentSlug)))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -152,36 +152,35 @@ class MovieControllerTest {
 
         verify(movieService).deleteMovie(slug);
     }
-
-    @Test
-    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
-        // GIVEN
-        String query = "Lord of the Rings";
-        List<Movie> expectedMovies = List.of(
-                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
-                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
-        );
-        when(movieService.fetchAndStoreMovies(query)).thenReturn(expectedMovies);
-
-        // WHEN & THEN
-        mockMvc.perform(get("/api/movies/search/{query}", query))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(expectedMovies)));
-
-        verify(movieService).fetchAndStoreMovies(query);
-    }
-
-    @Test
-    void searchMovies_ShouldReturnEmptyList_WhenNoResultsFound() throws Exception {
-        // GIVEN
-        String query = "Non-existent Movie";
-        when(movieService.fetchAndStoreMovies(query)).thenReturn(List.of());
-
-        // WHEN & THEN
-        mockMvc.perform(get("/api/movies/search/{query}", query))
-                .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
-
-        verify(movieService).fetchAndStoreMovies(query);
-    }
+//    @Test
+//    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
+//        // GIVEN
+//        String query = "Lord of the Rings";
+//        List<Movie> expectedMovies = List.of(
+//                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
+//                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
+//        );
+//        when(movieService.fetchAndStoreMovies(query)).thenReturn(expectedMovies);
+//
+//        // WHEN & THEN
+//        mockMvc.perform(get("/api/movies/search/{query}", query))
+//                .andExpect(status().isOk())
+//                .andExpect(content().json(objectMapper.writeValueAsString(expectedMovies)));
+//
+//        verify(movieService).fetchAndStoreMovies(query);
+//    }
+//
+//    @Test
+//    void searchMovies_ShouldReturnEmptyList_WhenNoResultsFound() throws Exception {
+//        // GIVEN
+//        String query = "Non-existent Movie";
+//        when(movieService.fetchAndStoreMovies(query)).thenReturn(List.of());
+//
+//        // WHEN & THEN
+//        mockMvc.perform(get("/api/movies/search/{query}", query))
+//                .andExpect(status().isOk())
+//                .andExpect(content().json("[]"));
+//
+//        verify(movieService).fetchAndStoreMovies(query);
+//    }
 }

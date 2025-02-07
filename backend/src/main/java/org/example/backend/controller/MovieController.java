@@ -1,6 +1,7 @@
 package org.example.backend.controller;
 
 import org.example.backend.model.Movie;
+import org.example.backend.service.DailyMovieService;
 import org.example.backend.service.MovieService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,10 +15,11 @@ import java.util.List;
 public class MovieController {
 
     private final MovieService movieService;
+    private final DailyMovieService dailyMovieService;
 
-    public MovieController(MovieService movieService)
-    {
+    public MovieController(MovieService movieService, DailyMovieService dailyMovieService) {
         this.movieService = movieService;
+        this.dailyMovieService = dailyMovieService;
     }
 
     @GetMapping
@@ -59,11 +61,17 @@ public class MovieController {
         }
     }
 
-    @GetMapping("/search/{query}")
-    public ResponseEntity<List<Movie>> searchMovies(@PathVariable String query) {
-        System.out.println("CONTROLLER: Received search query: " + query);
-        List<Movie> movies = movieService.fetchAndStoreMovies(query);
-            return ResponseEntity.ok(movies);
+//    @GetMapping("/search/{query}")
+//    public ResponseEntity<List<Movie>> searchMovies(@PathVariable String query) {
+//        System.out.println("CONTROLLER: Received search query: " + query);
+//        List<Movie> movies = movieService.fetchAndStoreMovies(query);
+//            return ResponseEntity.ok(movies);
+//    }
+
+    @GetMapping("/daily")
+    public ResponseEntity<List<Movie>> getDailyMovies() {
+        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(List.of("randomQuery"));
+        return ResponseEntity.ok(movies);
     }
 
 }
