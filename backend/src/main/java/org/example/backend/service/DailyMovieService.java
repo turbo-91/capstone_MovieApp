@@ -18,18 +18,17 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.Random;
 
 @Service
 public class DailyMovieService {
 
     private final MovieRepo movieRepository;
     private final RestTemplate restTemplate;
-    private QueryRepo queryRepository;
-
-    private String tmdbApiKey;
-    private String netzkinoEnv;
+    private final QueryRepo queryRepository;
+    private final String tmdbApiKey;
+    private final String netzkinoEnv;
 
     private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
@@ -42,7 +41,6 @@ public class DailyMovieService {
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
-
     public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv) {
         this.movieRepository = movieRepository;
         this.restTemplate = restTemplate;
@@ -51,11 +49,8 @@ public class DailyMovieService {
         this.netzkinoEnv = netzkinoEnv;
     }
 
-
     public List<Movie> getMoviesOfTheDay(List<String> names) {
-        if (names == null || names.isEmpty()) {
-            names = predefinedNames; // ✅ Use predefined list if parameter is empty
-        }
+        names = Optional.ofNullable(names).filter(list -> !list.isEmpty()).orElse(predefinedNames);
 
         LocalDate today = LocalDate.now();
         List<Movie> existingMovies = movieRepository.findByDateFetchedContaining(today).orElse(List.of());
@@ -67,25 +62,17 @@ public class DailyMovieService {
         String query = names.get(secureRandom.nextInt(names.size()));
         List<Query> usedQueries = queryRepository.findAll();
 
-
-
         if (usedQueries.stream().anyMatch(q -> q.query().contains(query))) {
             return movieRepository.findByQueriesContaining(query)
-                    .map(movies -> movies.stream().limit(5).toList())
-                    .orElse(List.of());
+                    .orElse(List.of()).stream().limit(5).toList();
         }
-
 
         return fetchAndStoreMovies(query, today);
     }
 
     public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
-        String netzkinoURL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search?q=" + query + "&d=" + netzkinoEnv;
-
+        String netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
         ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
-        if (response == null || response.getBody() == null || response.getBody().posts() == null || response.getBody().posts().isEmpty()) {
-            throw new NullPointerException("Invalid or empty API response");
-        }
 
         List<Movie> movies = response.getBody().posts().stream()
                 .map(post -> {
@@ -98,19 +85,13 @@ public class DailyMovieService {
                     return formatMovieData(post, query, today, imgImdb);
                 })
                 .collect(Collectors.toList());
-
         movieRepository.saveAll(movies);
         queryRepository.save(new Query(query));
-
         return movies;
     }
 
 
-
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
-        if (post == null || post.custom_fields() == null) {
-            throw new NullPointerException("Post or Custom Fields is null");
-        }
         return new Movie(
                 post.slug(),
                 post.id(),
@@ -128,19 +109,15 @@ public class DailyMovieService {
         );
     }
 
-
-
     public String extractImdbId(String imdbLink) {
-        if (imdbLink == null || !imdbLink.contains("tt")) {
-            return "";
-        }
-        String[] parts = imdbLink.split("/");
-        for (String part : parts) {
-            if (part.startsWith("tt")) {
-                return part;
-            }
-        }
-        return "";
+        return Optional.ofNullable(imdbLink)
+                .filter(link -> link.contains("tt"))
+                .map(link -> link.split("/"))
+                .stream()
+                .flatMap(Arrays::stream)
+                .filter(part -> part.startsWith("tt"))
+                .findFirst()
+                .orElse("");
     }
 
     public String fetchMoviePosterFromTmdb(String imdbId) {
@@ -150,18 +127,17 @@ public class DailyMovieService {
         String tmdbURL = TMDB_BASE_URL + imdbId + "?api_key=" + tmdbApiKey + "&language=de&external_source=imdb_id";
         try {
             ResponseEntity<TmdbResponse> response = restTemplate.getForEntity(tmdbURL, TmdbResponse.class);
-            if (response != null && response.getBody() != null && response.getBody().movie_results() != null && !response.getBody().movie_results().isEmpty()) {
-                String backdropPath = response.getBody().movie_results().get(0).backdrop_path();
-                if (backdropPath != null && !backdropPath.isEmpty()) {
-                    return TMDB_IMAGE_URL + backdropPath;
-                }
-            }
+            return Optional.ofNullable(response)
+                    .map(ResponseEntity::getBody)
+                    .map(TmdbResponse::movie_results)
+                    .filter(results -> !results.isEmpty())
+                    .map(results -> results.get(0).backdrop_path())
+                    .filter(path -> !path.isEmpty())
+                    .map(path -> TMDB_IMAGE_URL + path)
+                    .orElse("N/A");
         } catch (Exception e) {
             System.err.println("Error fetching TMDB poster: " + e.getMessage());
         }
         return "N/A";
     }
-    }
-
-
-
+}
