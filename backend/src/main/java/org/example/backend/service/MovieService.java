@@ -58,10 +58,11 @@ public List<Movie> getAllMovies() {
     }
 
     public Movie updateMovie(Movie movie) {
-        if (movieRepo.existsBySlug(movie.slug())) {
+        String slug = movie.slug();
+        if (movieRepo.existsBySlug(slug)) {
             return movieRepo.save(movie);
         } else {
-            throw new IllegalArgumentException("Movie with slug " + movie.slug() + " does not exist.");
+            throw new IllegalArgumentException("Movie does not exist.");
         }
     }
 

@@ -189,7 +189,7 @@ class MovieServiceTest {
         Movie movieToUpdate = new Movie(
                 "2",
                 000,
-                " ",
+                "non-existent-movie",
                 " ",
                 " ",
                 " ",
@@ -206,7 +206,7 @@ class MovieServiceTest {
 
         // WHEN & THEN
         Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.updateMovie(movieToUpdate));
-        assertEquals("Movie with slug " + slug + " does not exist.", exception.getMessage());
+        assertEquals("Movie does not exist.", exception.getMessage());
         verify(repo).existsBySlug(slug);
         verify(repo, never()).save(any());
     }

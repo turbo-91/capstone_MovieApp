@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
@@ -32,14 +33,26 @@ public class DailyMovieService {
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
 
-    public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv ) {
+    private final List<String> predefinedNames = Arrays.asList(
+            "Liam", "Noah", "Oliver", "James", "Elijah",
+            "Sophia", "Isabella", "Ava", "Mia", "Charlotte"
+    );
+
+
+    public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, String tmdbApiKey, String netzkinoEnv) {
         this.movieRepository = movieRepository;
         this.restTemplate = restTemplate;
+        this.queryRepository = queryRepository;
         this.tmdbApiKey = tmdbApiKey;
-        this.netzkinoEnv=netzkinoEnv;
+        this.netzkinoEnv = netzkinoEnv;
     }
 
+
     public List<Movie> getMoviesOfTheDay(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            names = predefinedNames; // ✅ Use predefined list if parameter is empty
+        }
+
         LocalDate today = LocalDate.now();
         List<Movie> existingMovies = movieRepository.findByDateFetchedContaining(today).orElse(List.of());
 
@@ -49,6 +62,8 @@ public class DailyMovieService {
 
         String query = names.get(new Random().nextInt(names.size()));
         List<Query> usedQueries = queryRepository.findAll();
+
+
 
         if (usedQueries.stream().anyMatch(q -> q.query().contains(query))) {
             return movieRepository.findByQueriesContaining(query)
@@ -60,7 +75,7 @@ public class DailyMovieService {
         return fetchAndStoreMovies(query, today);
     }
 
-    private List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
+    public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
         String netzkinoURL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search?q=" + query + "&d=" + netzkinoEnv;
 
         ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
@@ -86,19 +101,19 @@ public class DailyMovieService {
     }
 
 
-    private Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
+    public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
         return new Movie(
                 post.slug(),
                 post.id(),
                 post.slug(),
-                post.title(),
-                CustomFields.getOrDefault(post.custom_fields().Jahr(), "0"),
-                post.content(),
-                CustomFields.getOrDefault(post.custom_fields().Regisseur(), "Unknown"),
-                CustomFields.getOrDefault(post.custom_fields().Stars(), "Unknown"),
-                CustomFields.getOrDefault(post.custom_fields().featured_img_all(), ""),
-                CustomFields.getOrDefault(post.custom_fields().featured_img_all_small(), ""),
-                imgImdb,
+                post.title().trim(),
+                CustomFields.getOrDefault(post.custom_fields().Jahr(), "0").trim(),
+                post.content().trim(),
+                CustomFields.getOrDefault(post.custom_fields().Regisseur(), "Unknown").trim(),
+                CustomFields.getOrDefault(post.custom_fields().Stars(), "Unknown").trim(),  // ✅ FIX: Trim to remove spaces
+                CustomFields.getOrDefault(post.custom_fields().featured_img_all(), "").trim(),
+                CustomFields.getOrDefault(post.custom_fields().featured_img_all_small(), "").trim(),
+                imgImdb.trim(),
                 List.of(query),
                 List.of(today)
         );
@@ -106,11 +121,20 @@ public class DailyMovieService {
 
 
 
-    private String extractImdbId(String imdbLink) {
-        return imdbLink.contains("tt") ? imdbLink.split("/")[imdbLink.split("/").length - 1] : "";
+    public String extractImdbId(String imdbLink) {
+        if (imdbLink == null || !imdbLink.contains("tt")) {
+            return "";
+        }
+        String[] parts = imdbLink.split("/");
+        for (String part : parts) {
+            if (part.startsWith("tt")) {
+                return part;
+            }
+        }
+        return "";
     }
 
-    private String fetchMoviePosterFromTmdb(String imdbId) {
+    public String fetchMoviePosterFromTmdb(String imdbId) {
         String tmdbURL = "https://api.themoviedb.org/3/find/" + imdbId + "?api_key=" + tmdbApiKey + "&language=de&external_source=imdb_id";
 
         try {
