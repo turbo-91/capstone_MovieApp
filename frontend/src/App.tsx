@@ -1,39 +1,15 @@
-import { useState } from "react";
-import axios from "axios";
+import useSWR from "swr";
+import {fetcher} from "./utils/fetcher.ts";
 
-type Movie = {
-    slug: string;
-    title: string;
-    year: number;
-    overview: string;
-    imgUrl: string;
-};
 
 function App() {
-    const [movies, setMovies] = useState<Movie[]>([]);
-    const [query, setQuery] = useState<string>("");
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const { data, error } = useSWR("api/daily", fetcher, {
+        shouldRetryOnError: false,
+    });
 
-    const searchMovies = (query: string) => {
-        console.log("query beginning searchMovies:", query)
-        axios
-            .get<Movie[]>(`http://localhost:8080/api/movies/search/${query}`) // Send query as a path variable
-            .then((response) => {
-                const allMovies = response.data; // List of movies from the backend
-                console.log("Movies fetched successfully:", allMovies);
-                setMovies(allMovies); // Update state with the fetched movies
-            })
-            .catch((error) => {
-                console.error("Error fetching movies from the backend:", error);
-            });
-    };
-
-    const handleSearch = () => {
-        if (query.trim() !== "") {
-            searchMovies(query);
-        }
-    };
+    if (!data && !error) return <div>Loading...</div>;
+    if (error) return <div>Error loading movies: {error.message}</div>;
+    if (!data.length) return <p>No movies found.</p>;
 
 
     return (
