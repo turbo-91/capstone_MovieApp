@@ -3,6 +3,8 @@ package org.example.backend.service;
 import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class MovieService {
     private final String tmdbApiKey;
     private final String netzkinoEnv;
 
+    private static final Logger logger = LoggerFactory.getLogger(MovieService.class);
     private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
@@ -31,17 +34,25 @@ public class MovieService {
 
     // database interactions
     public List<Movie> getAllMovies() {
+        System.out.println("Fetching all movies from database...");
         try {
             List<Movie> movies = movieRepo.findAll();
+            System.out.println("Retrieved " + movies.size() + " movies from database.");
             return movies;
-        } catch (DataAccessException e) {
-            throw new DatabaseException("Failed to fetch movies", e);
+        } catch (Exception e) {
+            System.out.println("Failed to fetch movies: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Database error occurred");
         }
     }
 
     public Movie getMovieBySlug(String slug) {
+        System.out.println("Fetching movie by slug: " + slug);
         return movieRepo.findBySlug(slug)
-                .orElseThrow(() -> new IllegalArgumentException("Movie with slug " + slug + " not found."));
+                .orElseThrow(() -> {
+                    System.out.println("Movie with slug " + slug + " not found!");
+                    return new IllegalArgumentException("Movie with slug " + slug + " not found.");
+                });
     }
 
     public Movie saveMovie(Movie movie) {
