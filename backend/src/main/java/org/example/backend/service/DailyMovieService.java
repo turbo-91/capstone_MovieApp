@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDate;
@@ -60,7 +61,8 @@ public class DailyMovieService {
             return existingMovies.stream().limit(5).collect(Collectors.toList());
         }
 
-        String query = names.get(new Random().nextInt(names.size()));
+        SecureRandom secureRandom = new SecureRandom();
+        String query = names.get(secureRandom.nextInt(names.size()));
         List<Query> usedQueries = queryRepository.findAll();
 
 
