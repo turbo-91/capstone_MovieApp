@@ -36,6 +36,7 @@ class MovieControllerTest {
         movieController = new MovieController(movieService, dailyMovieService);
         mockMvc = MockMvcBuilders.standaloneSetup(movieController).build();
         objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
     }
 
     @Test
@@ -150,6 +151,67 @@ class MovieControllerTest {
 
         verify(movieService).deleteMovie(slug);
     }
+
+    @Test
+    void getDailyMovies_ShouldReturnListOfMovies() throws Exception {
+        // GIVEN
+        List<Movie> dailyMovies = List.of(
+                new Movie(
+                        "1",
+                        101,
+                        "slug-movie-1",
+                        "Inception",
+                        "2010",
+                        "A thief who enters the dreams of others...",
+                        "Christopher Nolan",
+                        "Leonardo DiCaprio, Joseph Gordon-Levitt",
+                        "https://example.com/netzkino1.jpg",
+                        "https://example.com/netzkino1_small.jpg",
+                        "https://example.com/imdb1.jpg",
+                        List.of("Sci-Fi", "Thriller"),
+                        List.of(LocalDate.now())
+                ),
+                new Movie(
+                        "2",
+                        102,
+                        "slug-movie-2",
+                        "The Dark Knight",
+                        "2008",
+                        "Batman battles the Joker in Gotham City...",
+                        "Christopher Nolan",
+                        "Christian Bale, Heath Ledger",
+                        "https://example.com/netzkino2.jpg",
+                        "https://example.com/netzkino2_small.jpg",
+                        "https://example.com/imdb2.jpg",
+                        List.of("Action", "Crime", "Drama"),
+                        List.of(LocalDate.now())
+                )
+        );
+
+        when(dailyMovieService.getMoviesOfTheDay(List.of("randomQuery"))).thenReturn(dailyMovies);
+
+        // WHEN & THEN
+        mockMvc.perform(get("/api/movies/daily"))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(dailyMovies)));
+
+        verify(dailyMovieService).getMoviesOfTheDay(List.of("randomQuery"));
+    }
+
+    @Test
+    void getDailyMovies_ShouldReturnEmptyList_WhenNoMoviesAvailable() throws Exception {
+        // GIVEN
+        when(dailyMovieService.getMoviesOfTheDay(List.of("randomQuery"))).thenReturn(List.of());
+
+        // WHEN & THEN
+        mockMvc.perform(get("/api/movies/daily"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]")); // Expecting an empty JSON array
+
+        verify(dailyMovieService).getMoviesOfTheDay(List.of("randomQuery"));
+    }
+}
+
 //    @Test
 //    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
 //        // GIVEN
@@ -181,4 +243,4 @@ class MovieControllerTest {
 //
 //        verify(movieService).fetchAndStoreMovies(query);
 //    }
-}
+
