@@ -276,6 +276,26 @@ class DailyMovieServiceTest {
         assertEquals("N/A", imageUrl);
     }
 
+    @Test
+    void getMoviesOfTheDay_ShouldReturnMovies_WhenQueryWasPreviouslyUsed() {
+        // GIVEN
+        String query = "Inception";
+        Query existingQuery = new Query(query);
+        Movie movie = new Movie("1", 100, "slug", "title", "2010", "overview", "Christopher Nolan", "Leonardo DiCaprio", "img1", "img2", "img3", List.of(query), List.of(LocalDate.now()));
+
+        when(queryRepository.findAll()).thenReturn(List.of(existingQuery));
+        when(movieRepository.findByQueriesContaining(query)).thenReturn(Optional.of(List.of(movie)));
+
+        // WHEN
+        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(List.of(query));
+
+        // THEN
+        assertEquals(1, movies.size());
+        assertEquals(movie, movies.get(0));
+        verify(queryRepository).findAll();
+        verify(movieRepository).findByQueriesContaining(query);
+    }
+
 }
 
 
