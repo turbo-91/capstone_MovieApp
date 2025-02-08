@@ -15,10 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,21 +72,29 @@ public class DailyMovieService {
         String netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
         ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
 
-        List<Movie> movies = response.getBody().posts().stream()
+        List<Movie> movies = Optional.ofNullable(response.getBody())
+                .map(NetzkinoResponse::posts)
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(Objects::nonNull) // Ensure no null posts are processed
                 .map(post -> {
-                    if (post == null || post.custom_fields() == null) {
-                        throw new NullPointerException("Post or Custom Fields is null");
+                    if (post.custom_fields() == null) {
+                        throw new NullPointerException("Custom Fields is null");
                     }
+                    // Use the helper method from CustomFields to safely get the IMDb link
                     String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
                     String imdbId = extractImdbId(imdbLink);
                     String imgImdb = imdbId.isEmpty() ? "N/A" : fetchMoviePosterFromTmdb(imdbId);
                     return formatMovieData(post, query, today, imgImdb);
                 })
                 .collect(Collectors.toList());
+
         movieRepository.saveAll(movies);
         queryRepository.save(new Query(query));
         return movies;
     }
+
+
 
 
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
