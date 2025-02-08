@@ -26,10 +26,7 @@ public class DailyMovieService {
     private final RestTemplate restTemplate;
     private QueryRepo queryRepository;
 
-    @Value("${tmdb.api.key}")
     private String tmdbApiKey;
-
-    @Value("${netzkino.env}")
     private String netzkinoEnv;
 
     private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
@@ -42,7 +39,7 @@ public class DailyMovieService {
     );
 
 
-    public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, String tmdbApiKey, String netzkinoEnv) {
+    public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv) {
         this.movieRepository = movieRepository;
         this.restTemplate = restTemplate;
         this.queryRepository = queryRepository;
