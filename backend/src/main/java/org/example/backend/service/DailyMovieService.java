@@ -82,26 +82,23 @@ public class DailyMovieService {
     public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
         String netzkinoURL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search?q=" + query + "&d=" + netzkinoEnv;
 
-        // Perform the API request
         ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
-
-        // Check if response or its body is null
         if (response == null || response.getBody() == null || response.getBody().posts() == null || response.getBody().posts().isEmpty()) {
-            throw new RuntimeException("Invalid or empty API response");
+            throw new NullPointerException("Invalid or empty API response");
         }
 
-        // Process the movies if the body and posts are valid
         List<Movie> movies = response.getBody().posts().stream()
                 .map(post -> {
+                    if (post == null || post.custom_fields() == null) {
+                        throw new NullPointerException("Post or Custom Fields is null");
+                    }
                     String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
                     String imdbId = extractImdbId(imdbLink);
                     String imgImdb = imdbId.isEmpty() ? "N/A" : fetchMoviePosterFromTmdb(imdbId);
-
                     return formatMovieData(post, query, today, imgImdb);
                 })
                 .collect(Collectors.toList());
 
-        // Save the movies and query to the database
         movieRepository.saveAll(movies);
         queryRepository.save(new Query(query));
 
@@ -111,6 +108,9 @@ public class DailyMovieService {
 
 
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
+        if (post == null || post.custom_fields() == null) {
+            throw new NullPointerException("Post or Custom Fields is null");
+        }
         return new Movie(
                 post.slug(),
                 post.id(),
@@ -144,33 +144,24 @@ public class DailyMovieService {
     }
 
     public String fetchMoviePosterFromTmdb(String imdbId) {
-        String tmdbURL = "https://api.themoviedb.org/3/find/" + imdbId + "?api_key=" + tmdbApiKey + "&language=de&external_source=imdb_id";
-
+        if (imdbId == null || imdbId.isEmpty()) {
+            return "N/A";
+        }
+        String tmdbURL = TMDB_BASE_URL + imdbId + "?api_key=" + tmdbApiKey + "&language=de&external_source=imdb_id";
         try {
-            // Perform the API request
             ResponseEntity<TmdbResponse> response = restTemplate.getForEntity(tmdbURL, TmdbResponse.class);
-
-            // Validate the response and its body
-            if (response != null && response.getBody() != null) {
-                List<TmdbMovieResult> movieResults = response.getBody().movie_results();
-                if (movieResults != null && !movieResults.isEmpty()) {
-                    // Extract the backdrop_path of the first movie result
-                    String backdropPath = movieResults.get(0).backdrop_path();
-                    if (backdropPath != null && !backdropPath.isEmpty()) {
-                        return "https://image.tmdb.org/t/p/w500" + backdropPath;
-                    }
+            if (response != null && response.getBody() != null && response.getBody().movie_results() != null && !response.getBody().movie_results().isEmpty()) {
+                String backdropPath = response.getBody().movie_results().get(0).backdrop_path();
+                if (backdropPath != null && !backdropPath.isEmpty()) {
+                    return TMDB_IMAGE_URL + backdropPath;
                 }
             }
-
-            // Log if no valid movie results or backdrop path was found
-            System.err.println("No valid backdrop path found for TMDB ID: " + imdbId);
         } catch (Exception e) {
             System.err.println("Error fetching TMDB poster: " + e.getMessage());
         }
-
-        // Fallback value
         return "N/A";
+    }
     }
 
 
-}
+
