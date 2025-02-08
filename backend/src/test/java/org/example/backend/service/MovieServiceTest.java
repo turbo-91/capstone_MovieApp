@@ -1,157 +1,243 @@
-//package org.example.backend.service;
-//
-//import org.example.backend.dtos.netzkino.*;
-//import org.example.backend.dtos.tmdb.TmdbMovieResult;
-//import org.example.backend.dtos.tmdb.TmdbResponse;
-//import org.example.backend.exceptions.DatabaseException;
-//import org.example.backend.model.Movie;
-//import org.example.backend.repo.MovieRepo;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.dao.DataAccessException;
-//import org.springframework.http.ResponseEntity;
-//import org.springframework.test.annotation.DirtiesContext;
-//import org.springframework.web.client.RestTemplate;
-//
-//import java.time.OffsetDateTime;
-//import java.util.Collections;
-//import java.util.List;
-//import java.util.Optional;
-//
-//import static org.junit.jupiter.api.Assertions.*;
-//import static org.mockito.Mockito.*;
-//
-//@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-//class MovieServiceTest {
-//
-//    private MovieRepo repo;
-//    private RestTemplate restTemplate;
-//    private MovieService movieService;
-//
-//    @BeforeEach
-//    void setUp() {
-//        repo = mock(MovieRepo.class);
-//        restTemplate = mock(RestTemplate.class);
-//        movieService = new MovieService(repo, restTemplate, "dummyTmdbApiKey", "dummyNetzkinoEnv");
-//    }
-//
-//    @Test
-//    void getAllMovies_ShouldReturnListOfMovies_whenCalled() {
-//        // GIVEN
-//        Movie movie1 = new Movie("herr-der-ringe-1", "Herr der Ringe - Die Gefährten", 2001, "A journey begins.", "/image1.jpg");
-//        Movie movie2 = new Movie("herr-der-ringe-2", "Herr der Ringe - Die zwei Türme", 2002, "The adventure continues.", "/image2.jpg");
-//
-//        List<Movie> movieList = List.of(movie1, movie2);
-//        when(repo.findAll()).thenReturn(movieList);
-//
-//        // WHEN
-//        List<Movie> actual = movieService.getAllMovies();
-//
-//        // THEN
-//        assertEquals(movieList, actual);
-//        verify(repo).findAll();
-//    }
-//
-//    @Test
-//    void getMovieBySlug_ShouldReturnMovie_whenSlugExists() {
-//        // GIVEN
-//        String slug = "herr-der-ringe-1";
-//        Movie expectedMovie = new Movie(slug, "Herr der Ringe - Die Gefährten", 2001, "A journey begins.", "/image.jpg");
-//        when(repo.findBySlug(slug)).thenReturn(Optional.of(expectedMovie));
-//
-//        // WHEN
-//        Movie actualMovie = movieService.getMovieBySlug(slug);
-//
-//        // THEN
-//        assertEquals(expectedMovie, actualMovie);
-//        verify(repo).findBySlug(slug);
-//    }
-//
-//    @Test
-//    void getMovieBySlug_ShouldThrowException_whenSlugDoesNotExist() {
-//        // GIVEN
-//        String nonExistentSlug = "non-existent-movie";
-//        when(repo.findBySlug(nonExistentSlug)).thenReturn(Optional.empty());
-//
-//        // WHEN & THEN
-//        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.getMovieBySlug(nonExistentSlug));
-//        assertEquals("Movie with slug " + nonExistentSlug + " not found.", exception.getMessage());
-//        verify(repo).findBySlug(nonExistentSlug);
-//    }
-//
-//    @Test
-//    void saveMovie_ShouldSaveAndReturnMovie_whenCalled() {
-//        // GIVEN
-//        Movie inputMovie = new Movie("new-movie", "New Movie", 2023, "A new story.", "/new-image.jpg");
-//        when(repo.save(inputMovie)).thenReturn(inputMovie);
-//
-//        // WHEN
-//        Movie actual = movieService.saveMovie(inputMovie);
-//
-//        // THEN
-//        assertEquals(inputMovie, actual);
-//        verify(repo).save(inputMovie);
-//    }
-//
-//    @Test
-//    void updateMovie_ShouldUpdateAndReturnMovie_whenSlugExists() {
-//        // GIVEN
-//        String slug = "existing-movie";
-//        Movie updatedMovie = new Movie(slug, "Updated Movie", 2023, "Updated description.", "/updated.jpg");
-//
-//        when(repo.existsBySlug(slug)).thenReturn(true);
-//        when(repo.save(updatedMovie)).thenReturn(updatedMovie);
-//
-//        // WHEN
-//        Movie actual = movieService.updateMovie(updatedMovie);
-//
-//        // THEN
-//        assertEquals(updatedMovie, actual);
-//        verify(repo).existsBySlug(slug);
-//        verify(repo).save(updatedMovie);
-//    }
-//
-//    @Test
-//    void updateMovie_ShouldThrowException_whenSlugDoesNotExist() {
-//        // GIVEN
-//        String slug = "non-existent-movie";
-//        Movie movieToUpdate = new Movie(slug, "Non-existent Movie", 2023, "No data.", "/none.jpg");
-//
-//        when(repo.existsBySlug(slug)).thenReturn(false);
-//
-//        // WHEN & THEN
-//        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.updateMovie(movieToUpdate));
-//        assertEquals("Movie with slug " + slug + " does not exist.", exception.getMessage());
-//        verify(repo).existsBySlug(slug);
-//        verify(repo, never()).save(any());
-//    }
-//
-//    @Test
-//    void deleteMovie_ShouldDeleteMovie_whenSlugExists() {
-//        // GIVEN
-//        String slug = "movie-to-delete";
-//        when(repo.existsBySlug(slug)).thenReturn(true);
-//
-//        // WHEN
-//        movieService.deleteMovie(slug);
-//
-//        // THEN
-//        verify(repo).existsBySlug(slug);
-//        verify(repo).deleteBySlug(slug);
-//    }
-//
-//    @Test
-//    void deleteMovie_ShouldThrowException_whenSlugDoesNotExist() {
-//        // GIVEN
-//        String slug = "non-existent-movie";
-//        when(repo.existsBySlug(slug)).thenReturn(false);
-//
-//        // WHEN & THEN
-//        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.deleteMovie(slug));
-//        assertEquals("Movie with slug " + slug + " does not exist.", exception.getMessage());
-//        verify(repo).existsBySlug(slug);
-//        verify(repo, never()).deleteBySlug(any());
-//    }
+
+package org.example.backend.service;
+
+import org.example.backend.dtos.netzkino.*;
+import org.example.backend.dtos.tmdb.TmdbMovieResult;
+import org.example.backend.dtos.tmdb.TmdbResponse;
+import org.example.backend.model.Movie;
+import org.example.backend.repo.MovieRepo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+class MovieServiceTest {
+
+    private MovieRepo repo;
+    private RestTemplate restTemplate;
+    private MovieService movieService;
+
+    @BeforeEach
+    void setUp() {
+        repo = mock(MovieRepo.class);
+        restTemplate = mock(RestTemplate.class);
+        movieService = new MovieService(repo, restTemplate, "dummyTmdbApiKey", "dummyNetzkinoEnv");
+    }
+
+    @Test
+    void getAllMovies_ShouldReturnListOfMovies_whenCalled() {
+        // GIVEN
+        Movie movie1 = new Movie(
+                "1",                     // id
+                101,                      // netzkinoId
+                "slug-movie-1",           // slug
+                "Inception",              // title
+                "2010",                   // year
+                "A thief who enters the dreams of others...",  // overview
+                "Christopher Nolan",      // regisseur
+                "Leonardo DiCaprio, Joseph Gordon-Levitt", // stars
+                "https://example.com/netzkino1.jpg", // imgNetzkino
+                "https://example.com/netzkino1_small.jpg", // imgNetzkinoSmall
+                "https://example.com/imdb1.jpg", // imgImdb
+                List.of("Sci-Fi", "Thriller"),  // queries
+                List.of(LocalDate.now())  // dateFetched
+        );
+
+        // Creating movie2
+        Movie movie2 = new Movie(
+                "2",
+                102,
+                "slug-movie-2",
+                "The Dark Knight",
+                "2008",
+                "Batman battles the Joker in Gotham City...",
+                "Christopher Nolan",
+                "Christian Bale, Heath Ledger",
+                "https://example.com/netzkino2.jpg",
+                "https://example.com/netzkino2_small.jpg",
+                "https://example.com/imdb2.jpg",
+                List.of("Action", "Crime", "Drama"),
+                List.of(LocalDate.now())
+        );
+
+        List<Movie> movieList = List.of(movie1, movie2);
+        when(repo.findAll()).thenReturn(movieList);
+
+        // WHEN
+        List<Movie> actual = movieService.getAllMovies();
+
+        // THEN
+        assertEquals(movieList, actual);
+        verify(repo).findAll();
+    }
+
+    @Test
+    void getMovieBySlug_ShouldReturnMovie_whenSlugExists() {
+        // GIVEN
+        String slug = "slug-movie-1";
+        Movie expectedMovie = new Movie(
+                "1",                     // id
+                101,                      // netzkinoId
+                "slug-movie-1",           // slug
+                "Inception",              // title
+                "2010",                   // year
+                "A thief who enters the dreams of others...",  // overview
+                "Christopher Nolan",      // regisseur
+                "Leonardo DiCaprio, Joseph Gordon-Levitt", // stars
+                "https://example.com/netzkino1.jpg", // imgNetzkino
+                "https://example.com/netzkino1_small.jpg", // imgNetzkinoSmall
+                "https://example.com/imdb1.jpg", // imgImdb
+                List.of("Sci-Fi", "Thriller"),  // queries
+                List.of(LocalDate.now())  // dateFetched
+        );
+        when(repo.findBySlug(slug)).thenReturn(Optional.of(expectedMovie));
+
+        // WHEN
+        Movie actualMovie = movieService.getMovieBySlug(slug);
+
+        // THEN
+        assertEquals(expectedMovie, actualMovie);
+        verify(repo).findBySlug(slug);
+    }
+
+    @Test
+    void getMovieBySlug_ShouldThrowException_whenSlugDoesNotExist() {
+        // GIVEN
+        String nonExistentSlug = "non-existent-movie";
+        when(repo.findBySlug(nonExistentSlug)).thenReturn(Optional.empty());
+
+        // WHEN & THEN
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.getMovieBySlug(nonExistentSlug));
+        assertEquals("Movie with slug " + nonExistentSlug + " not found.", exception.getMessage());
+        verify(repo).findBySlug(nonExistentSlug);
+    }
+
+    @Test
+    void saveMovie_ShouldSaveAndReturnMovie_whenCalled() {
+        // GIVEN
+        Movie inputMovie  = new Movie(
+                "2",
+                777,
+                "slug-movie-2",
+                "The Dark Knight",
+                "2008",
+                "Batman battles the Joker in Gotham City...",
+                "Christopher Nolan",
+                "Christian Bale, Heath Ledger",
+                "https://example.com/netzkino2.jpg",
+                "https://example.com/netzkino2_small.jpg",
+                "https://example.com/imdb2.jpg",
+                List.of("Action", "Crime", "Drama"),
+                List.of(LocalDate.now())
+        );
+        when(repo.save(inputMovie)).thenReturn(inputMovie);
+
+        // WHEN
+        Movie actual = movieService.saveMovie(inputMovie);
+
+        // THEN
+        assertEquals(inputMovie, actual);
+        verify(repo).save(inputMovie);
+    }
+
+    @Test
+    void updateMovie_ShouldUpdateAndReturnMovie_whenSlugExists() {
+        // GIVEN
+        String slug = "slug-movie-2";
+        Movie updatedMovie = new Movie (
+                "2",
+                102,
+                "slug-movie-2",
+                "The Dark Knight",
+                "2008",
+                "Batman battles the Joker in Gotham City...",
+                "Christopher Nolan",
+                "Christian Bale, Heath Ledger",
+                "https://example.com/netzkino2.jpg",
+                "https://example.com/netzkino2_small.jpg",
+                "https://example.com/imdb2.jpg",
+                List.of("Action", "Crime", "Drama"),
+                List.of(LocalDate.now())
+        );
+
+        when(repo.existsBySlug(slug)).thenReturn(true);
+        when(repo.save(updatedMovie)).thenReturn(updatedMovie);
+
+        // WHEN
+        Movie actual = movieService.updateMovie(updatedMovie);
+
+        // THEN
+        assertEquals(updatedMovie, actual);
+        verify(repo).existsBySlug(slug);
+        verify(repo).save(updatedMovie);
+    }
+
+    @Test
+    void updateMovie_ShouldThrowException_whenSlugDoesNotExist() {
+        // GIVEN
+        String slug = "non-existent-movie";
+        Movie movieToUpdate = new Movie(
+                "2",
+                000,
+                "non-existent-movie",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                " ",
+                List.of(" ", " ", " "),
+                List.of(LocalDate.now())
+        );
+
+        when(repo.existsBySlug(slug)).thenReturn(false);
+
+        // WHEN & THEN
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.updateMovie(movieToUpdate));
+        assertEquals("Movie does not exist.", exception.getMessage());
+        verify(repo).existsBySlug(slug);
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void deleteMovie_ShouldDeleteMovie_whenSlugExists() {
+        // GIVEN
+        String slug = "movie-to-delete";
+        when(repo.existsBySlug(slug)).thenReturn(true);
+
+        // WHEN
+        movieService.deleteMovie(slug);
+
+        // THEN
+        verify(repo).existsBySlug(slug);
+        verify(repo).deleteBySlug(slug);
+    }
+
+    @Test
+    void deleteMovie_ShouldThrowException_whenSlugDoesNotExist() {
+        // GIVEN
+        String slug = "non-existent-movie";
+        when(repo.existsBySlug(slug)).thenReturn(false);
+
+        // WHEN & THEN
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.deleteMovie(slug));
+        assertEquals("Movie with slug " + slug + " does not exist.", exception.getMessage());
+        verify(repo).existsBySlug(slug);
+        verify(repo, never()).deleteBySlug(any());
+    }
 //
 //    @Test
 //    void fetchAndStoreMovies_ShouldReturnMovies_whenApiReturnsResults() {
@@ -210,7 +296,6 @@
 //                null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0
 //        );
 //
-//        // Mock the API response
 //        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
 //                .thenReturn(ResponseEntity.ok(netzkinoResponse));
 //
@@ -222,21 +307,13 @@
 //
 //        // THEN
 //        System.out.println("Number of movies returned: " + fetchedMovies.size());
+//
 //        for (Movie movie : fetchedMovies) {
 //            System.out.println("Stored movie: " + movie.title() + ", Year: " + movie.year());
 //        }
 //
 //        assertEquals(1, fetchedMovies.size(), "The number of stored movies should be 1");
-//
-//        // Verify the attributes of the saved movie
-//        Movie savedMovie = fetchedMovies.get(0);
-//        assertEquals("lotr", savedMovie.slug(), "Expected slug to match");
-//        assertEquals("Lord of the Rings", savedMovie.title(), "Expected title to match");
-//        assertEquals("Epic fantasy.", savedMovie.overview(), "Expected overview to match");
-//        assertEquals(2001, savedMovie.year(), "Expected year to match");
-//
-//        // Verify the batch save method was called with the correct list
-//        verify(repo).saveAll(fetchedMovies);
+//        verify(repo).save(any(Movie.class));
 //    }
 //
 //    @Test
@@ -247,70 +324,37 @@
 //        Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
 //        NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
 //
-//        // Mock the API call
 //        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
 //
 //        // WHEN
 //        List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
 //
 //        // THEN
-//        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be fetched and saved");
-//
-//        // Verify the attributes of the saved movie
+//        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
 //        Movie savedMovie = fetchedMovies.get(0);
-//        assertEquals("slug", savedMovie.slug(), "Expected slug to match");
-//        assertEquals("Title", savedMovie.title(), "Expected title to match");
-//        assertEquals("Overview", savedMovie.overview(), "Expected overview to match");
 //        assertEquals("UNKNOWN", savedMovie.imgUrl(), "Expected IMDb ID to be UNKNOWN");
-//
-//        // Verify the batch save method was called with the correct list
-//        verify(repo).saveAll(fetchedMovies);
+//        verify(repo).save(savedMovie);
 //    }
 //
 //    @Test
 //    void fetchAndStoreMovies_ShouldStoreMovieWithDefaultYear_WhenYearIsInvalid() {
 //        // GIVEN
 //        String query = "InvalidYearMovie";
+//        CustomFields customFields = new CustomFields(null, null,null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of("InvalidYear"), null, null, null, null, null, null, null, null, null, null, null, null, null);
+//        Post post = new Post(1, "slug", "Title", "Overview", null, null, new Author("AuthorName"), List.of(), null, customFields, List.of(), 1, true, 1, new Match("title", 0, query, query.length()));
+//        NetzkinoResponse response = new NetzkinoResponse(null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0);
 //
-//        // Create custom fields with an invalid year
-//        CustomFields customFields = new CustomFields(
-//                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-//                null, null, null, null, false, null, null, null, null, null, List.of("InvalidYear"),
-//                null, null, null, null, null, null, null, null, null, null, null, null, null
-//        );
-//
-//        // Create a post with invalid year
-//        Post post = new Post(
-//                1, "slug", "Title", "Overview", null, null,
-//                new Author("AuthorName"), List.of(), null, customFields, List.of(),
-//                1, true, 1, new Match("title", 0, query, query.length())
-//        );
-//
-//        // Create a NetzkinoResponse with the post
-//        NetzkinoResponse response = new NetzkinoResponse(
-//                null, null, null, 1, 1, 1, null, List.of(post), null, 0, 0
-//        );
-//
-//        // Mock the API call
 //        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class))).thenReturn(ResponseEntity.ok(response));
 //
 //        // WHEN
 //        List<Movie> fetchedMovies = movieService.fetchAndStoreMovies(query);
 //
 //        // THEN
-//        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be fetched and saved");
-//
-//        // Verify the attributes of the saved movie
+//        assertEquals(1, fetchedMovies.size(), "Expected 1 movie to be saved");
 //        Movie savedMovie = fetchedMovies.get(0);
-//        assertEquals("slug", savedMovie.slug(), "Expected slug to match");
-//        assertEquals("Title", savedMovie.title(), "Expected title to match");
-//        assertEquals("Overview", savedMovie.overview(), "Expected overview to match");
 //        assertEquals(0, savedMovie.year(), "Expected default year to be 0");
-//
-//        // Verify the batch save method was called with the correct list
-//        verify(repo).saveAll(fetchedMovies);
+//        verify(repo).save(savedMovie);
 //    }
-//
 //
 //    @Test
 //    void processNetzkinoMovie_ShouldReturnNull_WhenCustomFieldsAreNull() {
@@ -381,17 +425,14 @@
 //    }
 //
 //    @Test
-//    void getAllMovies_ShouldThrowDatabaseException_WhenDatabaseFetchFails() {
+//    void getAllMovies_ShouldThrowRuntimeException_WhenDatabaseFetchFails() {
 //        // GIVEN
-//        when(repo.findAll()).thenThrow(new DataAccessException("Database error") {});
+//        when(repo.findAll()).thenThrow(new RuntimeException("Database error"));
 //
 //        // WHEN & THEN
-//        DatabaseException exception = assertThrows(DatabaseException.class, () -> movieService.getAllMovies());
-//        assertEquals("Failed to fetch movies", exception.getMessage(), "Expected a specific exception message");
-//        assertNotNull(exception.getCause(), "Exception cause should not be null");
-//        assertEquals("Database error", exception.getCause().getMessage(), "Expected cause message to match the thrown exception");
+//        RuntimeException exception = assertThrows(RuntimeException.class, () -> movieService.getAllMovies());
+//        assertEquals("Failed to fetch movies from the database.", exception.getMessage());
 //    }
-//
 //
 //    @Test
 //    void extractImdbId_ShouldReturnNull_WhenImdbLinkIsInvalid() {
@@ -406,35 +447,35 @@
 //        assertNull(imdbId, "Expected extractImdbId to return null for an invalid IMDb link");
 //    }
 //
-////    @Test
-////    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenPosterPathIsNull() {
-////        // GIVEN
-////        String imdbId = "tt1234567";
-////        String title = "Movie Without Poster";
-////
-////        TmdbMovieResult movieResult = new TmdbMovieResult(
-////                "id", 0, "original_language", "original_title",
-////                "overview", "poster_path", "release_date", false,
-////                "title", List.of(1), 0.0, "backdrop_path",
-////                false, 0.0, 0
-////        );
-////        TmdbResponse tmdbResponse = new TmdbResponse(
-////                List.of(movieResult),
-////                Collections.emptyList(),
-////                Collections.emptyList(),
-////                Collections.emptyList(),
-////                Collections.emptyList()
-////        );
-////
-////        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
-////                .thenReturn(ResponseEntity.ok(tmdbResponse));
-////
-////        // WHEN
-////        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
-////
-////        // THEN
-////        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when poster_path is null");
-////    }
+//    @Test
+//    void fetchMoviePosterFromTmdb_ShouldReturnNA_WhenPosterPathIsNull() {
+//        // GIVEN
+//        String imdbId = "tt1234567";
+//        String title = "Movie Without Poster";
+//
+//        TmdbMovieResult movieResult = new TmdbMovieResult(
+//                "id", 0, "original_language", "original_title",
+//                "overview", "poster_path", "release_date", false,
+//                "title", List.of(1), 0.0, "backdrop_path",
+//                false, 0.0, 0
+//        );
+//        TmdbResponse tmdbResponse = new TmdbResponse(
+//                List.of(movieResult),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList(),
+//                Collections.emptyList()
+//        );
+//
+//        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+//                .thenReturn(ResponseEntity.ok(tmdbResponse));
+//
+//        // WHEN
+//        String result = movieService.fetchMoviePosterFromTmdb(imdbId, title);
+//
+//        // THEN
+//        assertEquals("N/A", result, "Expected fetchMoviePosterFromTmdb to return 'N/A' when poster_path is null");
+//    }
 //
 //    @Test
 //    void extractImdbId_ShouldReturnNull_WhenImdbLinksIsNull() {
@@ -551,6 +592,6 @@
 //        assertNotNull(movie, "Expected processNetzkinoMovie to return a Movie object");
 //        assertEquals("UNKNOWN", movie.imgUrl(), "Expected imgUrl to be 'UNKNOWN' when TMDB poster is not found");
 //    }
-//
-//
-//}
+
+
+}
