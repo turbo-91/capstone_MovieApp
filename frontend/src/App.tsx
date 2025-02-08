@@ -1,11 +1,34 @@
 import useSWR from "swr";
 import {fetcher} from "./utils/fetcher.ts";
-
+import {IMovie} from "./types/Movie.ts";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import SliderCard from "./components/SliderCard.tsx";
+import Slider from "react-slick";
+import {useEffect, useState} from "react";
 
 function App() {
-    const { data, error } = useSWR("api/daily", fetcher, {
+    const [movies, setMovies] = useState([]);
+    const { data, error } = useSWR("api/movies/daily", fetcher, {
         shouldRetryOnError: false,
     });
+
+    useEffect(() => {
+        if (data && !movies.length) {
+            setMovies(data);
+        }
+    }, [data, movies]);
+
+    // Slider functionality
+
+    const settings = {
+        dots: true,
+        infinite: true,
+        speed: 500,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+    };
+
 
     if (!data && !error) return <div>Loading...</div>;
     if (error) return <div>Error loading movies: {error.message}</div>;
@@ -14,39 +37,20 @@ function App() {
 
     return (
         <div className="app">
-            <h1>Movie Search</h1>
-
-            {/* Search Input & Button */}
-            <div>
-                <input
-                    type="text"
-                    placeholder="Search for a movie..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)} // Update query state on input change
-                />
-                <button onClick={handleSearch}>Search</button>
-            </div>
-
-            {/* Loading Indicator */}
-            {loading && <div>Loading movies...</div>}
-
-            {/* Error Message */}
-            {error && <div style={{ color: "red" }}>{error}</div>}
-
-            {/* Movie List */}
-            <div className="movie-list">
-                {movies.length > 0 ? (
-                    movies.map((movie) => (
-                        <div key={movie.slug} className="movie-card">
-                            <h2>{movie.title} ({movie.year})</h2>
-                            <img src={movie.imgUrl} alt={movie.title} width="150" />
-                            <p>{movie.overview}</p>
-                        </div>
-                    ))
-                ) : (
-                    !loading && <p>No movies found.</p>
-                )}
-            </div>
+            {/*<div className="movie-list">*/}
+            {/*        <Slider {...settings}>*/}
+            {/*        {data.map((movie: IMovie) => (*/}
+            {/*                <SliderCard key={movie.netzkinoId} movie={movie} />*/}
+            {/*            ))}*/}
+            {/*        </Slider>*/}
+            {/*</div>*/}
+                    {data.map((movie: IMovie) => (
+                            <><h2>{movie.title}</h2>
+                                <p>{movie.year}</p>
+                                <h2>{movie.regisseur}</h2>
+                                <p>{movie.stars}</p>
+                                <img src={movie.imgImdb} alt={movie.title} width="200" /></>
+                        ))}
         </div>
     );
 }
