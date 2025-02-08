@@ -3,6 +3,7 @@ package org.example.backend.service;
 import org.example.backend.dtos.netzkino.CustomFields;
 import org.example.backend.dtos.netzkino.NetzkinoResponse;
 import org.example.backend.dtos.netzkino.Post;
+import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
 import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
@@ -39,6 +40,8 @@ public class DailyMovieService {
             "Sophia", "Isabella", "Ava", "Mia", "Charlotte"
     );
 
+    private static final SecureRandom secureRandom = new SecureRandom();
+
 
     public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv) {
         this.movieRepository = movieRepository;
@@ -61,7 +64,6 @@ public class DailyMovieService {
             return existingMovies.stream().limit(5).collect(Collectors.toList());
         }
 
-        SecureRandom secureRandom = new SecureRandom();
         String query = names.get(secureRandom.nextInt(names.size()));
         List<Query> usedQueries = queryRepository.findAll();
 
@@ -80,11 +82,15 @@ public class DailyMovieService {
     public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
         String netzkinoURL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search?q=" + query + "&d=" + netzkinoEnv;
 
+        // Perform the API request
         ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
-        if (response.getBody() == null || response.getBody().posts().isEmpty()) {
+
+        // Check if response or its body is null
+        if (response == null || response.getBody() == null || response.getBody().posts() == null || response.getBody().posts().isEmpty()) {
             throw new RuntimeException("Invalid or empty API response");
         }
 
+        // Process the movies if the body and posts are valid
         List<Movie> movies = response.getBody().posts().stream()
                 .map(post -> {
                     String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
@@ -95,12 +101,13 @@ public class DailyMovieService {
                 })
                 .collect(Collectors.toList());
 
-
+        // Save the movies and query to the database
         movieRepository.saveAll(movies);
         queryRepository.save(new Query(query));
 
         return movies;
     }
+
 
 
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
@@ -140,14 +147,30 @@ public class DailyMovieService {
         String tmdbURL = "https://api.themoviedb.org/3/find/" + imdbId + "?api_key=" + tmdbApiKey + "&language=de&external_source=imdb_id";
 
         try {
+            // Perform the API request
             ResponseEntity<TmdbResponse> response = restTemplate.getForEntity(tmdbURL, TmdbResponse.class);
-            if (response.getBody() != null && response.getBody().movie_results() != null && !response.getBody().movie_results().isEmpty()) {
-                return "https://image.tmdb.org/t/p/w500" + response.getBody().movie_results().get(0).backdrop_path();
+
+            // Validate the response and its body
+            if (response != null && response.getBody() != null) {
+                List<TmdbMovieResult> movieResults = response.getBody().movie_results();
+                if (movieResults != null && !movieResults.isEmpty()) {
+                    // Extract the backdrop_path of the first movie result
+                    String backdropPath = movieResults.get(0).backdrop_path();
+                    if (backdropPath != null && !backdropPath.isEmpty()) {
+                        return "https://image.tmdb.org/t/p/w500" + backdropPath;
+                    }
+                }
             }
+
+            // Log if no valid movie results or backdrop path was found
+            System.err.println("No valid backdrop path found for TMDB ID: " + imdbId);
         } catch (Exception e) {
             System.err.println("Error fetching TMDB poster: " + e.getMessage());
         }
+
+        // Fallback value
         return "N/A";
     }
+
 
 }
