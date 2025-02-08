@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public record CustomFields(
         List<String> Adaptives_Streaming,
@@ -46,5 +47,18 @@ public record CustomFields(
         List<String> Featured_Video_Slider,
         List<String> featured_img_seven_small,
         List<String> offlineAvaiable
-) {}
+) {
+        /**
+         * Helper method to get a value or a default value if the list is null or empty.
+         *
+         * @param list the list to retrieve the value from
+         * @param defaultValue the default value to return if the list is null or empty
+         * @return the first value of the list or the default value
+         */
+        public static String getOrDefault(List<String> list, String defaultValue) {
+                return Optional.ofNullable(list)
+                        .filter(l -> !l.isEmpty())
+                        .map(l -> l.get(0))
+                        .orElse(defaultValue);
+        }}
 
