@@ -1,6 +1,7 @@
 package org.example.backend.service;
 
 import org.example.backend.dtos.netzkino.*;
+import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
 import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
@@ -228,6 +229,53 @@ class DailyMovieServiceTest {
         // THEN
         assertEquals("N/A", result);
     }
+
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldHandleNullResponseGracefully() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(null);
+
+        // WHEN
+        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+
+        // THEN
+        assertEquals("N/A", imageUrl);
+    }
+
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldHandleEmptyMovieResults() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        TmdbResponse tmdbResponse = new TmdbResponse(List.of(), List.of(), List.of(), List.of(), List.of());
+        ResponseEntity<TmdbResponse> responseEntity = mock(ResponseEntity.class);
+        when(responseEntity.getBody()).thenReturn(tmdbResponse);
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(responseEntity);
+
+        // WHEN
+        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+
+        // THEN
+        assertEquals("N/A", imageUrl);
+    }
+
+    @Test
+    void fetchMoviePosterFromTmdb_ShouldHandleNullBackdropPath() {
+        // GIVEN
+        String imdbId = "tt1234567";
+        TmdbMovieResult movieResult = new TmdbMovieResult(null, 1, "Title", "OriginalTitle", "Overview", "/poster.jpg", "movie", false, "en", List.of(), 8.0, "2022-01-01", false, 7.5, 100);
+        TmdbResponse tmdbResponse = new TmdbResponse(List.of(movieResult), List.of(), List.of(), List.of(), List.of());
+        ResponseEntity<TmdbResponse> responseEntity = mock(ResponseEntity.class);
+        when(responseEntity.getBody()).thenReturn(tmdbResponse);
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(responseEntity);
+
+        // WHEN
+        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+
+        // THEN
+        assertEquals("N/A", imageUrl);
+    }
+
 }
 
 
