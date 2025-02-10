@@ -107,13 +107,15 @@ class MovieServiceTest {
     }
 
     @Test
-    void getMovieBySlug_ShouldThrowException_whenSlugDoesNotExist() {
+    void getMovieBySlug_ShouldThrowDatabaseException_whenSlugDoesNotExist() {
         // GIVEN
         String nonExistentSlug = "non-existent-movie";
         when(repo.findBySlug(nonExistentSlug)).thenReturn(Optional.empty());
 
         // WHEN & THEN
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.getMovieBySlug(nonExistentSlug));
+        DatabaseException exception = assertThrows(DatabaseException.class,
+                () -> movieService.getMovieBySlug(nonExistentSlug));
+
         assertEquals("Movie with slug " + nonExistentSlug + " not found.", exception.getMessage());
         verify(repo).findBySlug(nonExistentSlug);
     }
@@ -222,13 +224,15 @@ class MovieServiceTest {
     }
 
     @Test
-    void deleteMovie_ShouldThrowException_whenSlugDoesNotExist() {
+    void deleteMovie_ShouldThrowDatabaseException_whenSlugDoesNotExist() {
         // GIVEN
         String slug = "non-existent-movie";
         when(repo.existsBySlug(slug)).thenReturn(false);
 
         // WHEN & THEN
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.deleteMovie(slug));
+        DatabaseException exception = assertThrows(DatabaseException.class,
+                () -> movieService.deleteMovie(slug));
+
         assertEquals("Movie with slug " + slug + " does not exist.", exception.getMessage());
         verify(repo).existsBySlug(slug);
         verify(repo, never()).deleteBySlug(any());

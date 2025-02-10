@@ -3,8 +3,6 @@ package org.example.backend.service;
 import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
