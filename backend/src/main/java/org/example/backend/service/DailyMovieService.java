@@ -388,7 +388,6 @@ public class DailyMovieService {
                                     return formatMovieData(post, finalQuery, today, imgImdb);
                                 } catch (Exception e) {
                                     System.out.println("Error formatting movie data: " + e.getMessage());
-                                    e.printStackTrace();
                                     return null;
                                 }
                             })
@@ -409,7 +408,6 @@ public class DailyMovieService {
 
             } catch (Exception e) {
                 System.out.println("Error fetching movies: " + e.getMessage());
-                e.printStackTrace();
             }
         }
 
@@ -500,7 +498,6 @@ public class DailyMovieService {
 
         } catch (Exception e) {
             System.out.println("fetchMoviePosterFromTmdb: Error fetching TMDB poster for IMDb ID " + imdbId + ": " + e.getMessage());
-            e.printStackTrace();
             return "N/A";
         }
     }

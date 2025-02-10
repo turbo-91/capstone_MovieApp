@@ -41,7 +41,6 @@ public class MovieService {
             return movies;
         } catch (Exception e) {
             System.out.println("Failed to fetch movies: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Database error occurred");
         }
     }

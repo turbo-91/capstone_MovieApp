@@ -80,7 +80,6 @@ public class MovieController {
             return ResponseEntity.ok(movies);
         } catch (Exception e) {
             System.out.println("Error fetching daily movies: " + e.getMessage());
-            e.printStackTrace(); // Print the full stack trace
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(List.of());  // Return empty list instead of throwing exception
         }
