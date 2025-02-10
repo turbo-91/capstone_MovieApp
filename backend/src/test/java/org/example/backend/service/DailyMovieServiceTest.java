@@ -3,7 +3,6 @@ package org.example.backend.service;
 import org.example.backend.dtos.netzkino.*;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
-import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
 import org.example.backend.repo.MovieRepo;

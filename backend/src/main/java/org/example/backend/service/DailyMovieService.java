@@ -9,8 +9,6 @@ import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
 import org.example.backend.repo.MovieRepo;
 import org.example.backend.repo.QueryRepo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
