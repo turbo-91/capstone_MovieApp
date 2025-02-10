@@ -210,7 +210,23 @@ class MovieControllerTest {
 
         verify(dailyMovieService).getMoviesOfTheDay(any());
     }
+
+    @Test
+    void getMoviesOfTheDay_ShouldHandleExceptionAndReturnEmptyList() {
+        // GIVEN
+        List<String> queries = List.of("Inception");
+        when(dailyMovieService.getMoviesOfTheDay(queries)).thenThrow(new RuntimeException("Database error"));
+
+        // WHEN
+        ResponseEntity<List<Movie>> response = movieController.getDailyMovies();
+
+        // THEN
+        assertEquals(200, response.getStatusCodeValue()); // Verify HTTP 500 status
+        assertEquals(List.of(), response.getBody()); // Verify the body contains an empty list
+    }
 }
+
+
 
 //    @Test
 //    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
