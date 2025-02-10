@@ -1,20 +1,15 @@
 
 package org.example.backend.service;
 
-import org.example.backend.dtos.netzkino.*;
-import org.example.backend.dtos.tmdb.TmdbMovieResult;
-import org.example.backend.dtos.tmdb.TmdbResponse;
+import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -206,7 +201,7 @@ class MovieServiceTest {
         when(repo.existsBySlug(slug)).thenReturn(false);
 
         // WHEN & THEN
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> movieService.updateMovie(movieToUpdate));
+        Exception exception = assertThrows(DatabaseException.class, () -> movieService.updateMovie(movieToUpdate));
         assertEquals("Movie does not exist.", exception.getMessage());
         verify(repo).existsBySlug(slug);
         verify(repo, never()).save(any());

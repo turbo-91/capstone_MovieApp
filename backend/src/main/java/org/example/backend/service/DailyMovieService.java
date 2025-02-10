@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @Service
 public class DailyMovieService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DailyMovieService.class);
     private final MovieRepo movieRepository;
     private final RestTemplate restTemplate;
     private final QueryRepo queryRepository;
@@ -35,6 +34,8 @@ public class DailyMovieService {
     private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/original";
     private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
 
+
+    // comment: I plan to transfer predefinedNames into specific endpoint later in time
     private final List<String> predefinedNames = Arrays.asList(
             "Liam",
             "Noah",
@@ -316,8 +317,12 @@ public class DailyMovieService {
     public List<Movie> getMoviesOfTheDay(List<String> names) {
         System.out.println("Fetching daily movies...");
 
+        // Check: welcher Tag ist heute?
+
         names = Optional.ofNullable(names).filter(list -> !list.isEmpty()).orElse(predefinedNames);
         LocalDate today = LocalDate.now();
+
+        // Check: heutige movies bereits in Datenbank -> return
 
         System.out.println("Today's date: " + today);
         System.out.println("Checking if movies are already stored for today...");
@@ -326,8 +331,10 @@ public class DailyMovieService {
 
         if (!existingMovies.isEmpty()) {
             System.out.println("Found " + existingMovies.size() + " existing movies for today, returning them.");
-            return existingMovies.stream().limit(5).collect(Collectors.toList());
+            return existingMovies.stream().limit(5).toList(); // Changed here
         }
+
+        // heutige movies nicht in Datenbank? -> fetchAndStoreMovies
 
         String query = names.get(secureRandom.nextInt(names.size()));
         System.out.println("Selected query for fetching movies: " + query);
@@ -343,6 +350,9 @@ public class DailyMovieService {
     }
 
     public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
+
+        // fetch from Netzkino API
+
         System.out.println("Fetching movies from external API using query: " + query);
         String netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
 
@@ -353,6 +363,7 @@ public class DailyMovieService {
         while (collectedMovies.size() < 5 && retryCount < maxRetries) {
             retryCount++;
 
+
             try {
                 ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
 
@@ -360,12 +371,15 @@ public class DailyMovieService {
                 List<Post> posts = Optional.ofNullable(response)
                         .map(ResponseEntity::getBody)
                         .map(NetzkinoResponse::posts)
-                        .orElseGet(() -> {
-                            return Collections.emptyList();
-                        });
+                        .orElse(Collections.emptyList());
+
+
+                // retrying to fetch
 
                 if (posts.isEmpty()) {
                     System.out.println("No valid posts retrieved, retrying...");
+
+                // movies fetched? prepare second fetching and data formatting
                 } else {
                     System.out.println("Fetched " + posts.size() + " movies from external API");
 
@@ -373,11 +387,13 @@ public class DailyMovieService {
                     List<Movie> newMovies = posts.stream()
                             .map(post -> {
                                 try {
+                                    // check for custom.fields property?
                                     if (post.custom_fields() == null) {
                                         System.out.println("Post has no custom fields, skipping...");
                                         return null;
                                     }
 
+                                    // check if IMDb ID exists
                                     String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
                                     String imdbId = extractImdbId(imdbLink);
 
@@ -386,12 +402,16 @@ public class DailyMovieService {
                                         return null;
                                     }
 
+                                    // Start IMDb fetching
+
                                     String imgImdb = fetchMoviePosterFromTmdb(imdbId);
 
                                     if ("N/A".equals(imgImdb)) {
                                         System.out.println("Image not found on TMDB, skipping movie: " + post.title());
                                         return null; // Drop movies that have no valid image
                                     }
+
+                                    // format Data
 
                                     return formatMovieData(post, finalQuery, today, imgImdb);
                                 } catch (Exception e) {
@@ -400,12 +420,13 @@ public class DailyMovieService {
                                 }
                             })
                             .filter(Objects::nonNull) // Remove skipped movies
-                            .collect(Collectors.toList());
+                            .toList();
 
                     collectedMovies.addAll(newMovies);
 
+                    // Stop as soon as 5 movies are collected
                     if (collectedMovies.size() >= 5) {
-                        break; // Stop as soon as 5 movies are collected
+                        break;
                     }
                 }
 
@@ -423,6 +444,8 @@ public class DailyMovieService {
         if (collectedMovies.size() < 5) {
             throw new IllegalStateException("Failed to fetch 5 movies after " + maxRetries + " attempts.");
         }
+
+        // integrate fallback, if not 5 movies after 10 retrys
 
         // Save and return only after at least 5 movies are found
         movieRepository.saveAll(collectedMovies);

@@ -3,6 +3,7 @@ package org.example.backend.service;
 import org.example.backend.dtos.netzkino.*;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
+import org.example.backend.exceptions.DatabaseException;
 import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
 import org.example.backend.repo.MovieRepo;
@@ -199,34 +200,53 @@ class DailyMovieServiceTest {
         when(movieRepository.findByDateFetchedContaining(any())).thenThrow(new RuntimeException("Database error"));
 
         // WHEN & THEN
-        assertThrows(RuntimeException.class, () -> dailyMovieService.getMoviesOfTheDay(List.of("Some Movie")));
+        // Prepare the input and precheck for exceptions
+        List<String> movieList = List.of("Some Movie");
+        doThrow(new RuntimeException("Database error"))
+                .when(movieRepository)
+                .findByDateFetchedContaining(any());
+
+// Test the method invocation
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> dailyMovieService.getMoviesOfTheDay(movieList));
+
+// Validate the exception message
+        assertEquals("Database error", exception.getMessage());
+
     }
 
     @Test
     void fetchAndStoreMovies_ShouldFailWhenNoMoviesAreEverFound() {
         // GIVEN
         LocalDate today = LocalDate.now();
-        when(movieRepository.findByDateFetchedContaining(today)).thenReturn(Optional.empty());
+        List<String> movieQuery = List.of("Nonexistent");
 
-        // Simulate API always returning empty results
-        NetzkinoResponse emptyResponse = new NetzkinoResponse( List.of(""),
-                " ",
-                "success",
-                0,
-                0,
-                1,
-                1,
-                List.of(),
-                "",
-                0,
-                0
+        // Define the empty response
+        NetzkinoResponse emptyResponse = new NetzkinoResponse(
+                List.of(), // Empty list of movies
+                "",        // Empty query string
+                "success", // Status
+                0,         // Total results
+                0,         // Start index
+                0,         // End index
+                0,         // Number of pages
+                List.of(), // Empty posts list
+                "",        // Empty slug
+                0,         // Some ID
+                0          // Some count
         );
+
+        when(movieRepository.findByDateFetchedContaining(today)).thenReturn(Optional.empty());
         when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
                 .thenReturn(ResponseEntity.ok(emptyResponse));
 
         // WHEN & THEN
-        assertThrows(IllegalStateException.class, () -> dailyMovieService.getMoviesOfTheDay(List.of("Nonexistent")));
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> dailyMovieService.getMoviesOfTheDay(movieQuery));
+
+        // Validate exception message
+        assertEquals("Failed to fetch 5 movies after 10 attempts.", exception.getMessage());
     }
+
 
 
     @Test

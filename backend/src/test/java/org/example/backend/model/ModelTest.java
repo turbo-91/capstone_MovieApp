@@ -5,7 +5,8 @@ import java.time.LocalDate;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ModelTest {
+
+class ModelTest {
 
     @Test
     void testMovieCreation() {

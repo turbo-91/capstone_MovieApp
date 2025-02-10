@@ -6,7 +6,6 @@ import org.example.backend.repo.MovieRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.List;
@@ -20,10 +19,6 @@ public class MovieService {
     private final String tmdbApiKey;
     private final String netzkinoEnv;
 
-    private static final Logger logger = LoggerFactory.getLogger(MovieService.class);
-    private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/find/";
-    private static final String TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500";
-    private static final String NETZKINO_URL = "https://api.netzkino.de.simplecache.net/capi-2.0a/search";
 
     public MovieService(MovieRepo movieRepo, RestTemplate restTemplate, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv ) {
         this.movieRepo = movieRepo;
@@ -41,7 +36,7 @@ public class MovieService {
             return movies;
         } catch (Exception e) {
             System.out.println("Failed to fetch movies: " + e.getMessage());
-            throw new RuntimeException("Database error occurred");
+            throw new DatabaseException("Database error occurred");
         }
     }
 
@@ -50,7 +45,7 @@ public class MovieService {
         return movieRepo.findBySlug(slug)
                 .orElseThrow(() -> {
                     System.out.println("Movie with slug " + slug + " not found!");
-                    return new IllegalArgumentException("Movie with slug " + slug + " not found.");
+                    return new DatabaseException("Movie with slug " + slug + " not found.");
                 });
     }
 
@@ -63,13 +58,13 @@ public class MovieService {
         if (movieRepo.existsBySlug(slug)) {
             return movieRepo.save(movie);
         } else {
-            throw new IllegalArgumentException("Movie does not exist.");
+            throw new DatabaseException("Movie does not exist.");
         }
     }
 
     public void deleteMovie(String slug) {
         if (!movieRepo.existsBySlug(slug)) {
-            throw new IllegalArgumentException("Movie with slug " + slug + " does not exist.");
+            throw new DatabaseException("Movie with slug " + slug + " does not exist.");
         }
         movieRepo.deleteBySlug(slug);
     }

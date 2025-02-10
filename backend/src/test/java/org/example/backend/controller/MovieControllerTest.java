@@ -5,6 +5,7 @@ import org.example.backend.service.DailyMovieService;
 import org.example.backend.service.MovieService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
@@ -221,7 +222,7 @@ class MovieControllerTest {
         ResponseEntity<List<Movie>> response = movieController.getDailyMovies();
 
         // THEN
-        assertEquals(200, response.getStatusCodeValue()); // Verify HTTP 500 status
+        assertEquals(HttpStatus.OK, response.getStatusCode()); // Verify HTTP 500 status
         assertEquals(List.of(), response.getBody()); // Verify the body contains an empty list
     }
 }
