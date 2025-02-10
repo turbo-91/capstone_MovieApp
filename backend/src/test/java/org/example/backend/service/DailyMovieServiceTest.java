@@ -23,6 +23,8 @@ import static org.mockito.Mockito.*;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class DailyMovieServiceTest {
 
+    // Fuck this shit
+
     private MovieRepo movieRepository;
     private QueryRepo queryRepository;
     private RestTemplate restTemplate;
