@@ -1,6 +1,7 @@
 #Allgemein
 .idea
 .DS_Store
+node_modules
 
 #Backend
 backend/target/

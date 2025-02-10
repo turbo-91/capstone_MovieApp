@@ -1,17 +1,24 @@
 package org.example.backend.model;
 
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.annotation.Id;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Document(collection = "movies")
 public record Movie(
+        @Id String id,
+        int netzkinoId,
         String slug,
         String title,
-        int year,
+        String year,
         String overview,
-        String imgUrl
-) {
-
-    public Movie withSlug(String slug) {
-        return new Movie(slug, this.title, this.year, this.overview, this.imgUrl);
-    }
-}
+        String regisseur,
+        String stars,
+        String imgNetzkino,
+        String imgNetzkinoSmall,
+        String imgImdb,
+        List<String> queries,
+        List<LocalDate> dateFetched
+) {}
