@@ -350,104 +350,41 @@ public class DailyMovieService {
     }
 
     public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
-
-        // fetch from Netzkino API
-
         System.out.println("Fetching movies from external API using query: " + query);
-        String netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
 
         List<Movie> collectedMovies = new ArrayList<>();
-        int maxRetries = 10; // Prevent infinite loops
-        int retryCount = 0;
+        int maxRetries = 10;
 
-        while (collectedMovies.size() < 5 && retryCount < maxRetries) {
-            retryCount++;
-
+        for (int retryCount = 0; collectedMovies.size() < 5 && retryCount < maxRetries; retryCount++) {
+            String netzkinoURL = buildNetzkinoUrl(query);
 
             try {
                 ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
 
-                // Handling possible null values using Optional
-                List<Post> posts = Optional.ofNullable(response)
-                        .map(ResponseEntity::getBody)
+                String finalQuery = query;
+                List<Movie> newMovies = Optional.ofNullable(response.getBody())
                         .map(NetzkinoResponse::posts)
-                        .orElse(Collections.emptyList());
+                        .orElse(Collections.emptyList()).stream()
+                        .map(post -> processMoviePost(post, finalQuery, today))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
 
+                collectedMovies.addAll(newMovies);
 
-                // retrying to fetch
-
-                if (posts.isEmpty()) {
-                    System.out.println("No valid posts retrieved, retrying...");
-
-                // movies fetched? prepare second fetching and data formatting
-                } else {
-                    System.out.println("Fetched " + posts.size() + " movies from external API");
-
-                    String finalQuery = query;
-                    List<Movie> newMovies = posts.stream()
-                            .map(post -> {
-                                try {
-                                    // check for custom.fields property?
-                                    if (post.custom_fields() == null) {
-                                        System.out.println("Post has no custom fields, skipping...");
-                                        return null;
-                                    }
-
-                                    // check if IMDb ID exists
-                                    String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
-                                    String imdbId = extractImdbId(imdbLink);
-
-                                    if (imdbId.isEmpty()) {
-                                        System.out.println("No valid IMDb ID found, skipping...");
-                                        return null;
-                                    }
-
-                                    // Start IMDb fetching
-
-                                    String imgImdb = fetchMoviePosterFromTmdb(imdbId);
-
-                                    if ("N/A".equals(imgImdb)) {
-                                        System.out.println("Image not found on TMDB, skipping movie: " + post.title());
-                                        return null; // Drop movies that have no valid image
-                                    }
-
-                                    // format Data
-
-                                    return formatMovieData(post, finalQuery, today, imgImdb);
-                                } catch (Exception e) {
-                                    System.out.println("Error formatting movie data: " + e.getMessage());
-                                    return null;
-                                }
-                            })
-                            .filter(Objects::nonNull) // Remove skipped movies
-                            .toList();
-
-                    collectedMovies.addAll(newMovies);
-
-                    // Stop as soon as 5 movies are collected
-                    if (collectedMovies.size() >= 5) {
-                        break;
-                    }
-                }
-
-                // Pick a new random query and search again
-                query = predefinedNames.get(secureRandom.nextInt(predefinedNames.size()));
-                System.out.println("Retry " + retryCount + ": Trying new query -> " + query);
-                netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
+                if (collectedMovies.size() >= 5) break;
 
             } catch (Exception e) {
                 System.out.println("Error fetching movies: " + e.getMessage());
             }
+
+            query = getRandomQuery();
+            System.out.println("Retry " + (retryCount + 1) + ": Trying new query -> " + query);
         }
 
-        // If retries exceeded, fail with an error
         if (collectedMovies.size() < 5) {
             throw new IllegalStateException("Failed to fetch 5 movies after " + maxRetries + " attempts.");
         }
 
-        // integrate fallback, if not 5 movies after 10 retrys
-
-        // Save and return only after at least 5 movies are found
         movieRepository.saveAll(collectedMovies);
         queryRepository.save(new Query(query));
 
@@ -455,6 +392,34 @@ public class DailyMovieService {
         return collectedMovies;
     }
 
+    private String buildNetzkinoUrl(String query) {
+        return NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
+    }
+
+    private String getRandomQuery() {
+        return predefinedNames.get(secureRandom.nextInt(predefinedNames.size()));
+    }
+
+    private Movie processMoviePost(Post post, String query, LocalDate today) {
+        if (post.custom_fields() == null) {
+            System.out.println("Post has no custom fields, skipping...");
+            return null;
+        }
+
+        String imdbId = extractImdbId(CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), ""));
+        if (imdbId.isEmpty()) {
+            System.out.println("No valid IMDb ID found, skipping...");
+            return null;
+        }
+
+        String imgImdb = fetchMoviePosterFromTmdb(imdbId);
+        if ("N/A".equals(imgImdb)) {
+            System.out.println("Image not found on TMDB, skipping movie: " + post.title());
+            return null;
+        }
+
+        return formatMovieData(post, query, today, imgImdb);
+    }
 
 
 
