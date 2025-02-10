@@ -63,13 +63,7 @@ public class MovieController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
     }
-
-//    @GetMapping("/search/{query}")
-//    public ResponseEntity<List<Movie>> searchMovies(@PathVariable String query) {
-//        System.out.println("CONTROLLER: Received search query: " + query);
-//        List<Movie> movies = movieService.fetchAndStoreMovies(query);
-//            return ResponseEntity.ok(movies);
-//    }
+    
 
     @GetMapping("/daily")
     public ResponseEntity<List<Movie>> getDailyMovies() {

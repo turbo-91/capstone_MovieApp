@@ -24,13 +24,6 @@ function App() {
 
     return (
         <div className="app">
-            {/*<div className="movie-list">*/}
-            {/*        <Slider {...settings}>*/}
-            {/*        {data.map((movie: IMovie) => (*/}
-            {/*                <SliderCard key={movie.netzkinoId} movie={movie} />*/}
-            {/*            ))}*/}
-            {/*        </Slider>*/}
-            {/*</div>*/}
                     {data.map((movie: IMovie) => (
                             <><h2>{movie.title}</h2>
                                 <p>{movie.year}</p>

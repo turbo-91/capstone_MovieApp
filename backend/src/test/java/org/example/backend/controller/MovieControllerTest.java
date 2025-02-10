@@ -6,9 +6,8 @@ import org.example.backend.service.MovieService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -228,36 +227,4 @@ class MovieControllerTest {
 }
 
 
-
-//    @Test
-//    void searchMovies_ShouldReturnMovies_WhenQueryIsValid() throws Exception {
-//        // GIVEN
-//        String query = "Lord of the Rings";
-//        List<Movie> expectedMovies = List.of(
-//                new Movie("lotr1", "Lord of the Rings: Fellowship", 2001, "First movie", "/image1.jpg"),
-//                new Movie("lotr2", "Lord of the Rings: Two Towers", 2002, "Second movie", "/image2.jpg")
-//        );
-//        when(movieService.fetchAndStoreMovies(query)).thenReturn(expectedMovies);
-//
-//        // WHEN & THEN
-//        mockMvc.perform(get("/api/movies/search/{query}", query))
-//                .andExpect(status().isOk())
-//                .andExpect(content().json(objectMapper.writeValueAsString(expectedMovies)));
-//
-//        verify(movieService).fetchAndStoreMovies(query);
-//    }
-//
-//    @Test
-//    void searchMovies_ShouldReturnEmptyList_WhenNoResultsFound() throws Exception {
-//        // GIVEN
-//        String query = "Non-existent Movie";
-//        when(movieService.fetchAndStoreMovies(query)).thenReturn(List.of());
-//
-//        // WHEN & THEN
-//        mockMvc.perform(get("/api/movies/search/{query}", query))
-//                .andExpect(status().isOk())
-//                .andExpect(content().json("[]"));
-//
-//        verify(movieService).fetchAndStoreMovies(query);
-//    }
 
