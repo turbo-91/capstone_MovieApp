@@ -347,8 +347,12 @@ public class DailyMovieService {
         String netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
 
         List<Movie> collectedMovies = new ArrayList<>();
+        int maxRetries = 10; // Prevent infinite loops
+        int retryCount = 0;
 
-        while (collectedMovies.size() < 5) { // Keep searching until we have at least 5 movies
+        while (collectedMovies.size() < 5 && retryCount < maxRetries) {
+            retryCount++;
+
             try {
                 ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
 
@@ -369,10 +373,6 @@ public class DailyMovieService {
                                     String imdbLink = CustomFields.getOrDefault(post.custom_fields().IMDb_Link(), "");
                                     String imdbId = extractImdbId(imdbLink);
 
-                                    System.out.println("Movie: " + post.title());
-                                    System.out.println("Extracted IMDb Link: " + imdbLink);
-                                    System.out.println("Extracted IMDb ID: " + imdbId);
-
                                     if (imdbId.isEmpty()) {
                                         System.out.println("No valid IMDb ID found, skipping...");
                                         return null;
@@ -385,7 +385,6 @@ public class DailyMovieService {
                                         return null; // Drop movies that have no valid image
                                     }
 
-                                    System.out.println("Final IMDb Image URL: " + imgImdb);
                                     return formatMovieData(post, finalQuery, today, imgImdb);
                                 } catch (Exception e) {
                                     System.out.println("Error formatting movie data: " + e.getMessage());
@@ -393,32 +392,30 @@ public class DailyMovieService {
                                     return null;
                                 }
                             })
-                            .filter(Objects::nonNull) // Remove null values (skipped movies)
+                            .filter(Objects::nonNull) // Remove skipped movies
                             .collect(Collectors.toList());
 
-                    // ✅ Ensure exactly 5 movies are stored
-                    if (collectedMovies.size() + newMovies.size() > 5) {
-                        int neededMovies = 5 - collectedMovies.size();
-                        collectedMovies.addAll(newMovies.subList(0, neededMovies));
-                        break; // Stop exactly at 5 movies
-                    } else {
-                        collectedMovies.addAll(newMovies);
-                    }
-                }
+                    collectedMovies.addAll(newMovies);
 
-                if (collectedMovies.size() == 5) {
-                    break; // Stop exactly at 5 movies
+                    if (collectedMovies.size() >= 5) {
+                        break; // Stop as soon as 5 movies are collected
+                    }
                 }
 
                 // Pick a new random query and search again
                 query = predefinedNames.get(secureRandom.nextInt(predefinedNames.size()));
-                System.out.println("Not enough movies found, trying new query: " + query);
+                System.out.println("Retry " + retryCount + ": Trying new query -> " + query);
                 netzkinoURL = NETZKINO_URL + "?q=" + query + "&d=" + netzkinoEnv;
 
             } catch (Exception e) {
-                System.out.println("Error fetching movies from Netzkino API: " + e.getMessage());
+                System.out.println("Error fetching movies: " + e.getMessage());
                 e.printStackTrace();
             }
+        }
+
+        // If retries exceeded, fail with an error
+        if (collectedMovies.size() < 5) {
+            throw new IllegalStateException("Failed to fetch 5 movies after " + maxRetries + " attempts.");
         }
 
         // Save and return only after at least 5 movies are found
@@ -428,6 +425,7 @@ public class DailyMovieService {
         System.out.println("Stored " + collectedMovies.size() + " movies in database.");
         return collectedMovies;
     }
+
 
 
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {

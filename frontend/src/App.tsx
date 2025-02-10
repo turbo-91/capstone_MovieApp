@@ -3,8 +3,6 @@ import {fetcher} from "./utils/fetcher.ts";
 import {IMovie} from "./types/Movie.ts";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import SliderCard from "./components/SliderCard.tsx";
-import Slider from "react-slick";
 import {useEffect, useState} from "react";
 
 function App() {
@@ -18,17 +16,6 @@ function App() {
             setMovies(data);
         }
     }, [data, movies]);
-
-    // Slider functionality
-
-    const settings = {
-        dots: true,
-        infinite: true,
-        speed: 500,
-        slidesToShow: 1,
-        slidesToScroll: 1,
-    };
-
 
     if (!data && !error) return <div>Loading...</div>;
     if (error) return <div>Error loading movies: {error.message}</div>;

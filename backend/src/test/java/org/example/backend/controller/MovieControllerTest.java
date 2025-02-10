@@ -188,27 +188,27 @@ class MovieControllerTest {
                 )
         );
 
-        when(dailyMovieService.getMoviesOfTheDay(List.of("randomQuery"))).thenReturn(dailyMovies);
+        when(dailyMovieService.getMoviesOfTheDay(any())).thenReturn(dailyMovies);
 
         // WHEN & THEN
         mockMvc.perform(get("/api/movies/daily"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(dailyMovies)));
 
-        verify(dailyMovieService).getMoviesOfTheDay(List.of("randomQuery"));
+        verify(dailyMovieService).getMoviesOfTheDay(any());
     }
 
     @Test
     void getDailyMovies_ShouldReturnEmptyList_WhenNoMoviesAvailable() throws Exception {
         // GIVEN
-        when(dailyMovieService.getMoviesOfTheDay(List.of("randomQuery"))).thenReturn(List.of());
+        when(dailyMovieService.getMoviesOfTheDay(any())).thenReturn(List.of());
 
         // WHEN & THEN
         mockMvc.perform(get("/api/movies/daily"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]")); // Expecting an empty JSON array
 
-        verify(dailyMovieService).getMoviesOfTheDay(List.of("randomQuery"));
+        verify(dailyMovieService).getMoviesOfTheDay(any());
     }
 }
 

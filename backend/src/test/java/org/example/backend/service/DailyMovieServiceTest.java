@@ -56,16 +56,13 @@ class DailyMovieServiceTest {
     void getMoviesOfTheDay_ShouldFetchNewMovies_WhenNoMoviesExistForToday() {
         // GIVEN
         LocalDate today = LocalDate.now();
-        List<String> movieNames = List.of("Inception", "Titanic", "Interstellar");
-        String selectedQuery = "Inception";
-
         when(movieRepository.findByDateFetchedContaining(today)).thenReturn(Optional.empty());
         when(queryRepository.findAll()).thenReturn(List.of());
 
-        // Mock API response from Netzkino
+        // Mock Netzkino API response
         CustomFields customFields = new CustomFields(
                 List.of("https://example.com/streaming-url"),
-                List.of("https://example.com/article-image.jpg"),
+                List.of("https://example.com/featured-img.jpg"),
                 List.of("152 min"),
                 "USA",
                 List.of("https://example.com/featured-img.jpg"),
@@ -106,7 +103,7 @@ class DailyMovieServiceTest {
         );
 
         Post mockPost = new Post(
-                102, // Netzkino ID
+                102,
                 "slug-the-dark-knight",
                 "The Dark Knight",
                 "Batman fights Joker",
@@ -124,43 +121,77 @@ class DailyMovieServiceTest {
         );
 
         NetzkinoResponse mockNetzkinoResponse = new NetzkinoResponse(
-                List.of("The Dark Knight"), // `_qryArr` should match the search term
-                "The Dark Knight",          // `searchTerm` should match the movie title
-                "success",                   // Status
-                1,                            // `count_total` (total movies found)
-                1,                            // `count` (movies on this page)
-                1,                            // `page` (current page number)
-                1,                            // `pages` (total number of pages)
-                List.of(mockPost),            // The list of movies returned
-                "slug-the-dark-knight",       // `slug` of the first result
-                102,                          // `id` (first movie's ID)
-                1                             // `post_count` (number of posts returned)
+                List.of("The Dark Knight"),
+                "The Dark Knight",
+                "success",
+                1,
+                1,
+                1,
+                1,
+                List.of(mockPost),
+                "slug-the-dark-knight",
+                102,
+                1
         );
 
-
+        ResponseEntity<NetzkinoResponse> mockedResponseEntity = ResponseEntity.ok(mockNetzkinoResponse);
         when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
-                .thenReturn(ResponseEntity.ok(mockNetzkinoResponse));
+                .thenReturn(mockedResponseEntity);
+
+        // Mock TMDB API response
+        TmdbResponse mockTmdbResponse = new TmdbResponse(
+                List.of(new TmdbMovieResult(
+                        "/sample-backdrop.jpg",
+                        1,
+                        "The Dark Knight",
+                        "The Dark Knight Original",
+                        "Some overview",
+                        "/sample-backdrop.jpg",
+                        "movie",
+                        false,
+                        "en",
+                        List.of(28, 80),
+                        9.0,
+                        "2008-07-18",
+                        false,
+                        8.5,
+                        1000
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+
+        ResponseEntity<TmdbResponse> tmdbResponseEntity = ResponseEntity.ok(mockTmdbResponse);
 
         // WHEN
-        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(movieNames);
+        when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
+                .thenReturn(tmdbResponseEntity);
+        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(List.of("Inception"));
+
+
+
 
         // THEN
-        assertEquals(1, movies.size());
+        assertEquals(5, movies.size());
         Movie movie = movies.get(0);
-        // Update assertions to match "The Dark Knight"
         assertEquals("The Dark Knight", movie.title());
         assertEquals("2008", movie.year());
         assertEquals("Christopher Nolan", movie.regisseur());
         assertEquals("Christian Bale, Heath Ledger", movie.stars());
         assertEquals("https://example.com/featured-img.jpg", movie.imgNetzkino());
         assertEquals("https://example.com/featured-img-small.jpg", movie.imgNetzkinoSmall());
-        assertEquals("https://imdb.com/title/tt0468569", CustomFields.getOrDefault(customFields.IMDb_Link(), ""));
+        assertEquals("https://image.tmdb.org/t/p/original/sample-backdrop.jpg", movie.imgImdb());
 
         verify(movieRepository).findByDateFetchedContaining(today);
         verify(queryRepository).findAll();
         verify(movieRepository).saveAll(anyList());
         verify(queryRepository).save(any(Query.class));
     }
+
+
+
 
     @Test
     void getMoviesOfTheDay_ShouldReturnEmptyList_WhenFetchingFails() {
@@ -170,6 +201,33 @@ class DailyMovieServiceTest {
         // WHEN & THEN
         assertThrows(RuntimeException.class, () -> dailyMovieService.getMoviesOfTheDay(List.of("Some Movie")));
     }
+
+    @Test
+    void fetchAndStoreMovies_ShouldFailWhenNoMoviesAreEverFound() {
+        // GIVEN
+        LocalDate today = LocalDate.now();
+        when(movieRepository.findByDateFetchedContaining(today)).thenReturn(Optional.empty());
+
+        // Simulate API always returning empty results
+        NetzkinoResponse emptyResponse = new NetzkinoResponse( List.of(""),
+                " ",
+                "success",
+                0,
+                0,
+                1,
+                1,
+                List.of(),
+                "",
+                0,
+                0
+        );
+        when(restTemplate.getForEntity(anyString(), eq(NetzkinoResponse.class)))
+                .thenReturn(ResponseEntity.ok(emptyResponse));
+
+        // WHEN & THEN
+        assertThrows(IllegalStateException.class, () -> dailyMovieService.getMoviesOfTheDay(List.of("Nonexistent")));
+    }
+
 
     @Test
     void extractImdbId_ShouldReturnValidImdbId_WhenValidImdbLinkProvided() {
