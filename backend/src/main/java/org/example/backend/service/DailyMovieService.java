@@ -356,13 +356,21 @@ public class DailyMovieService {
             try {
                 ResponseEntity<NetzkinoResponse> response = restTemplate.getForEntity(netzkinoURL, NetzkinoResponse.class);
 
-                if (response.getBody() == null || response.getBody().posts().isEmpty()) {
-                    System.out.println("No movies found for query: " + query);
+                // Handling possible null values using Optional
+                List<Post> posts = Optional.ofNullable(response)
+                        .map(ResponseEntity::getBody)
+                        .map(NetzkinoResponse::posts)
+                        .orElseGet(() -> {
+                            return Collections.emptyList();
+                        });
+
+                if (posts.isEmpty()) {
+                    System.out.println("No valid posts retrieved, retrying...");
                 } else {
-                    System.out.println("Fetched " + response.getBody().posts().size() + " movies from external API");
+                    System.out.println("Fetched " + posts.size() + " movies from external API");
 
                     String finalQuery = query;
-                    List<Movie> newMovies = response.getBody().posts().stream()
+                    List<Movie> newMovies = posts.stream()
                             .map(post -> {
                                 try {
                                     if (post.custom_fields() == null) {
@@ -426,6 +434,7 @@ public class DailyMovieService {
 
 
 
+
     public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
         return new Movie(
                 post.slug(),
@@ -473,33 +482,28 @@ public class DailyMovieService {
         try {
             ResponseEntity<TmdbResponse> response = restTemplate.getForEntity(tmdbURL, TmdbResponse.class);
 
-            if (response == null) {
-                System.out.println("fetchMoviePosterFromTmdb: Response is null.");
-                return "N/A";
-            }
-            if (response.getBody() == null) {
-                System.out.println("fetchMoviePosterFromTmdb: Response body is null.");
-                return "N/A";
-            }
-            if (response.getBody().movie_results() == null || response.getBody().movie_results().isEmpty()) {
-                System.out.println("fetchMoviePosterFromTmdb: No movie results found for IMDb ID: " + imdbId);
-                return "N/A";
-            }
-
-            TmdbMovieResult movieResult = response.getBody().movie_results().get(0);
-            if (movieResult.backdrop_path() == null || movieResult.backdrop_path().isEmpty()) {
-                System.out.println("fetchMoviePosterFromTmdb: No backdrop image found for IMDb ID: " + imdbId);
-                return "N/A";
-            }
-
-            String imageUrl = TMDB_IMAGE_URL + movieResult.backdrop_path();
-            System.out.println("fetchMoviePosterFromTmdb: Retrieved image URL: " + imageUrl);
-            return imageUrl;
+            return Optional.ofNullable(response)
+                    .map(ResponseEntity::getBody)
+                    .map(TmdbResponse::movie_results)
+                    .filter(results -> !results.isEmpty())
+                    .map(results -> results.get(0))
+                    .map(TmdbMovieResult::backdrop_path)
+                    .filter(path -> !path.isEmpty())
+                    .map(path -> {
+                        String imageUrl = TMDB_IMAGE_URL + path;
+                        System.out.println("fetchMoviePosterFromTmdb: Retrieved image URL: " + imageUrl);
+                        return imageUrl;
+                    })
+                    .orElseGet(() -> {
+                        System.out.println("fetchMoviePosterFromTmdb: No valid backdrop image found, returning N/A");
+                        return "N/A";
+                    });
 
         } catch (Exception e) {
             System.out.println("fetchMoviePosterFromTmdb: Error fetching TMDB poster for IMDb ID " + imdbId + ": " + e.getMessage());
             return "N/A";
         }
     }
+
 
 }
