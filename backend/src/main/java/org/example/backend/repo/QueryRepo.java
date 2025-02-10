@@ -15,3 +15,4 @@ public interface QueryRepo extends MongoRepository<Query, String> {
 
     Optional<Query> findByQuery(String query);
 }
+
