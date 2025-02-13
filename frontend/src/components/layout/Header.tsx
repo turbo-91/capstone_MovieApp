@@ -42,11 +42,9 @@ export default function Header(props: HeaderProps) {
     return (
         <div>
             <h1>MovieApp</h1>
-            {user ? (
-                <button onClick={logout}>Logout</button>
-            ) : (
-                <button onClick={login}>Login</button>
-            )}
+            <p>{user}</p>
+            <button onClick={login}>Login</button>
+            <button onClick={logout}>Logout</button>
             {user && (
                 <>
                     <h1 onClick={() => setMenu((prevMenu) => !prevMenu)}>Menu</h1>
