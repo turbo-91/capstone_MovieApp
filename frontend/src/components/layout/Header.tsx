@@ -33,8 +33,10 @@ export default function Header(props: HeaderProps) {
     function logout() {
         axios.post("api/users/logout").then(() => {
             setUser(undefined); // Clear user state on logout
+            setMenu(false); // Ensure menu is closed on logout
         });
     }
+
 
 
     return (
@@ -45,8 +47,12 @@ export default function Header(props: HeaderProps) {
             ) : (
                 <button onClick={login}>Login</button>
             )}
-            <h1 onClick={() => setMenu((prevMenu) => !prevMenu)}>Menu</h1>
-            {menu && <NavBar />}
+            {user && (
+                <>
+                    <h1 onClick={() => setMenu((prevMenu) => !prevMenu)}>Menu</h1>
+                    {menu && <NavBar />}
+                </>
+            )}
         </div>
     );
 }
