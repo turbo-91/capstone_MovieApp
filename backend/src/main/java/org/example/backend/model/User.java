@@ -9,5 +9,5 @@ import java.util.List;
 public record User(
         @Id String id,
         String username,
-        List<String> favorites 
+        List<String> favorites
 ) {}

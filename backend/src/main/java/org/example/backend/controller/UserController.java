@@ -11,7 +11,6 @@ public class UserController {
 
     @GetMapping("/me")
  public String getMe() {
-        System.out.println("username in backend" + SecurityContextHolder.getContext().getAuthentication().getName());
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }
