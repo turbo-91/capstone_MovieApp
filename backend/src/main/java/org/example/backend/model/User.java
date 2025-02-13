@@ -8,6 +8,7 @@ import java.util.List;
 @Document(collection = "users") // Specifies MongoDB collection
 public record User(
         @Id String id,
+        String githubId,
         String username,
         List<String> favorites
 ) {}

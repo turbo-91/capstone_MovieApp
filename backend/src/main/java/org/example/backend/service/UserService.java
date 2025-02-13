@@ -15,18 +15,18 @@ public class UserService {
         this.userRepo = userRepo;
     }
 
-    public User saveUser(String username, String email) {
-        Optional<User> existingUser = userRepo.findByUsername(username);
+    public User saveUser(String username, String githubId) {
+        Optional<User> existingUser = userRepo.findByGithubId(githubId);
 
         if (existingUser.isPresent()) {
             return existingUser.get();
         } else {
-            User newUser = new User(null, username, List.of());
+            User newUser = new User(null, username, githubId, List.of());
             return userRepo.save(newUser);
         }
     }
 
-    public Optional<User> getUser(String username) {
-        return userRepo.findByUsername(username);
+    public Optional<User> getUserByGithubId(String githubId) {
+        return userRepo.findByGithubId(githubId);
     }
 }

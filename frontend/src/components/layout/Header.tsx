@@ -1,10 +1,11 @@
 import {useEffect, useState} from "react";
 import NavBar from "./NavBar";
 import axios from 'axios'
+import {User} from "../../types/User.ts";
 
 type HeaderProps = {
-    user: string | undefined;
-    setUser: (user: string | undefined) => void;
+    user: User | undefined;
+    setUser: (user: User | undefined) => void;
 }
 
 export default function Header(props: HeaderProps) {
@@ -42,7 +43,7 @@ export default function Header(props: HeaderProps) {
     return (
         <div>
             <h1>MovieApp</h1>
-            <p>{user}</p>
+            <p>{user?.githubId}</p>
             <button onClick={login}>Login</button>
             <button onClick={logout}>Logout</button>
             {user && (

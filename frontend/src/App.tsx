@@ -3,11 +3,12 @@ import {Route, Routes} from "react-router-dom";
 import MoviesOfTheDay from "./components/MoviesOfTheDay.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import {useState} from "react";
+import {User} from "./types/User.ts";
 
 
 function App() {
 
-    const [user, setUser] = useState<string | undefined>();
+    const [user, setUser] = useState<User | undefined>();
 
     return (
             <Layout user={user} setUser={setUser}>
