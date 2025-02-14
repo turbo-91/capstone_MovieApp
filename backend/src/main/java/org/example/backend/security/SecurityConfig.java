@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/api/users/logout", "GET")) // Allow logout via GET
                         .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpStatus.OK.value())) // Return 200 OK
-                        .logoutSuccessUrl("/") // Redirect to home after logout
+                        .logoutSuccessUrl("localhost:5173/") // Redirect to home after logout
                 )
 
 
