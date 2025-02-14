@@ -3,12 +3,17 @@ import {Route, Routes} from "react-router-dom";
 import MoviesOfTheDay from "./components/MoviesOfTheDay.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import {useState} from "react";
-import {User} from "./types/User.ts";
+import axios from "axios";
 
 
 function App() {
 
-    const [user, setUser] = useState<User | undefined>();
+    const [user, setUser] = useState<string | undefined>();
+    axios.defaults.baseURL = window.location.host === 'localhost:5173'
+        ? 'http://localhost:8080'
+        : window.location.origin;
+
+    axios.defaults.withCredentials = true;
 
     return (
             <Layout user={user} setUser={setUser}>

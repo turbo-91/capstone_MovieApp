@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -25,8 +26,12 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
 
-                .logout(logout -> logout.logoutUrl("/api/users/logout")
-                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(200)))
+                .logout(logout -> logout
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/api/users/logout", "GET")) // Allow logout via GET
+                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpStatus.OK.value())) // Return 200 OK
+                        .logoutSuccessUrl("/") // Redirect to home after logout
+                )
+
 
                 .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
 

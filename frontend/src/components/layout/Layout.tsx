@@ -4,8 +4,8 @@ import {User} from "../../types/User.ts";
 
 interface LayoutProps {
     children: ReactNode;
-    user: User | undefined;
-    setUser: (user: User | undefined) => void;
+    user: string | undefined;
+    setUser: (user: string | undefined) => void;
 }
 
 
