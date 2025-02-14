@@ -13,7 +13,9 @@ export default function Header(props: HeaderProps) {
     const [menu, setMenu] = useState<boolean>(false);
 
 
-
+function logout() {
+    axios.post("api/users/logout")
+}
 
     return (
         <div>
