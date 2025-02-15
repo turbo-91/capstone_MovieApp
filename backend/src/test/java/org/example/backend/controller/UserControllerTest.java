@@ -1,5 +1,6 @@
 package org.example.backend.controller;
 
+import org.example.backend.exceptions.AuthException;
 import org.example.backend.model.User;
 import org.example.backend.repo.UserRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,11 +82,21 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
-    void testGetMe_WithLoggedInUser_expectUserId() throws Exception {
+    void testGetActiveUserId_WithLoggedInUser_expectUserId() throws Exception {
         mockMvc.perform(get("/api/users/active"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("user"));
     }
+
+    @Test
+    void testGetActiveUserId_WhenAnonymousUser_ShouldReturnUnauthorized() throws Exception {
+        SecurityContextHolder.clearContext(); // Ensure no authentication is set
+
+        mockMvc.perform(get("/api/users/active"))
+                .andExpect(status().isOk()) // Expecting "Unauthorized" but with 200 OK
+                .andExpect(content().string("Unauthorized"));
+    }
+
 
     @Test
     void testSaveActiveUser_WhenUserNotExists_ShouldSaveUser() throws Exception {
@@ -126,8 +137,22 @@ class UserControllerTest {
         assertEquals(1, userCount, "User count should still be 1, no duplicates allowed");
     }
 
+    @Test
+    @WithMockUser(username = "testUser")
+    void testSaveActiveUser_WhenAuthenticated_ShouldSaveUser() throws Exception {
+        mockMvc.perform(post("/api/users/save/testUser").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string("testUser"));
+    }
 
-
+    @Test
+    @WithMockUser(username = "12345")
+    void testSaveActiveUser_WithMockUser_ShouldSucceed() throws Exception {
+        mockMvc.perform(post("/api/users/save/12345").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string("12345"));
+    }
+    
 
     @Test
     void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {
