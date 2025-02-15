@@ -13,9 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -44,15 +42,13 @@ public class UserController {
     @PostMapping("save/{userId}")
     public synchronized String saveActiveUser(@PathVariable String userId) {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        System.out.println("🔍 Principal Object: " + principal);
-
         String userName = null;
 
         if (principal instanceof OAuth2User) {
-            // ✅ OAuth2 login
+            // OAuth2 login
             userName = ((OAuth2User) principal).getAttribute("login");
         } else if (principal instanceof org.springframework.security.core.userdetails.User) {
-            // ✅ Standard Spring Security login
+            // Standard Spring Security login
             userName = userId; // Instead of using getUsername(), set it explicitly
         }
 
@@ -71,13 +67,10 @@ public class UserController {
                 String finalUserName = userName;
                 return userRepo.findByGithubId(userId)
                         .map(existingUser -> {
-                            System.out.println("ℹ️ User already exists in DB.");
                             return userId; // User already exists
                         })
                         .orElseGet(() -> {
-                            System.out.println("💾 Saving new user...");
                             userRepo.save(new User(null, userId, finalUserName, List.of()));
-                            System.out.println("✅ User saved successfully!");
                             return userId;
                         });
             } finally {

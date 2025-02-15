@@ -1,6 +1,5 @@
 package org.example.backend.controller;
 
-import org.example.backend.exceptions.AuthException;
 import org.example.backend.model.User;
 import org.example.backend.repo.UserRepo;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -152,7 +150,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("12345"));
     }
-    
+
 
     @Test
     void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {

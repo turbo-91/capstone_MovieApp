@@ -2,7 +2,6 @@ package org.example.backend.controller;
 
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
-import org.example.backend.security.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
