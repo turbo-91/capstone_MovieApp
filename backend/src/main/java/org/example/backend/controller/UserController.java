@@ -29,8 +29,15 @@ public class UserController {
 
     @GetMapping(value = "active", produces = "text/plain")
     public String getActiveUserId() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        if ("anonymousUser".equals(userId)) {
+            return "Unauthorized";
+        }
+
+        return userId;
     }
+
 
     private static final Map<String, Object> userLocks = new ConcurrentHashMap<>();
 

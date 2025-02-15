@@ -99,6 +99,40 @@ class UserControllerTest {
         assertEquals(List.of(), savedUser.get().favorites());
     }
 
+
+    @Test
+    void testSaveActiveUser_WhenUserDoesNotExist_ShouldSaveUser() throws Exception {
+        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().string(TEST_USER_ID));
+
+        Optional<User> savedUser = userRepo.findByGithubId(TEST_USER_ID);
+        assertTrue(savedUser.isPresent(), "User should be saved in the database");
+        assertEquals(TEST_USER_ID, savedUser.get().githubId());
+        assertEquals(TEST_USERNAME, savedUser.get().username());
+    }
+
+    @Test
+    void testSaveActiveUser_WhenUserExists_ShouldNotCreateDuplicate() throws Exception {
+        userRepo.save(new User(null, TEST_USER_ID, TEST_USERNAME, List.of()));
+
+        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().string(TEST_USER_ID));
+
+        long userCount = userRepo.count();
+        assertEquals(1, userCount, "User count should still be 1, no duplicates allowed");
+    }
+
+
+
+
+    @Test
+    void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(get("/api/users/active/nonexistentUser"))
+                .andExpect(status().isNotFound());
+    }
+
     @Test
     void testGetActiveUser_WhenUserExists_ShouldReturnUser() throws Exception {
         // ✅ Insert the user into the database before running the test
@@ -115,9 +149,4 @@ class UserControllerTest {
             """));
     }
 
-    @Test
-    void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {
-        mockMvc.perform(get("/api/users/active/nonexistentUser"))
-                .andExpect(status().isNotFound());
-    }
 }
