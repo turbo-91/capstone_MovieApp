@@ -14,6 +14,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,6 +31,8 @@ public class UserController {
     public String getActiveUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
+
+    private static final Map<String, Object> userLocks = new ConcurrentHashMap<>();
 
     @PostMapping("save/{userId}")
     public synchronized String saveActiveUser(@PathVariable String userId) {
@@ -54,19 +58,24 @@ public class UserController {
             throw new AuthException("Unauthorized: User ID mismatch!");
         }
 
-        synchronized (userId.intern()) {
-            String finalUserName = userName;
-            return userRepo.findByGithubId(userId)
-                    .map(existingUser -> {
-                        System.out.println("ℹ️ User already exists in DB.");
-                        return userId; // User already exists
-                    })
-                    .orElseGet(() -> {
-                        System.out.println("💾 Saving new user...");
-                        userRepo.save(new User(null, userId, finalUserName, List.of()));
-                        System.out.println("✅ User saved successfully!");
-                        return userId;
-                    });
+        userLocks.putIfAbsent(userId, new Object());
+        synchronized (userLocks.get(userId)) {
+            try {
+                String finalUserName = userName;
+                return userRepo.findByGithubId(userId)
+                        .map(existingUser -> {
+                            System.out.println("ℹ️ User already exists in DB.");
+                            return userId; // User already exists
+                        })
+                        .orElseGet(() -> {
+                            System.out.println("💾 Saving new user...");
+                            userRepo.save(new User(null, userId, finalUserName, List.of()));
+                            System.out.println("✅ User saved successfully!");
+                            return userId;
+                        });
+            } finally {
+                userLocks.remove(userId); // Clean up lock object to prevent memory leaks
+            }
         }
     }
 
