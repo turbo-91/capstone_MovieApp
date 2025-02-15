@@ -26,11 +26,20 @@ export default function Header(props: HeaderProps) {
     const loadUser = () => {
         axios.get('/api/users/active')
             .then(response => {
-                setUser(response.data)
+                const loggedInUser = response.data;
+                console.log("User successfully loaded:", loggedInUser); // Debugging
+
+                setUser(loggedInUser); // ✅ Set user in frontend state
+
+                // ✅ Save the user in the backend with a POST request
+                axios.post(`/api/users/save/${loggedInUser}`)
+                    .then(() => console.log("User successfully saved in backend"))
+                    .catch(error => console.error("Error saving user:", error));
             })
             .catch(error => {
-                setUser(undefined)
-            })
+                console.log("Error loading user:", error);
+                setUser(undefined); // Clear user if request fails
+            });
     }
 
     useEffect(() => {
