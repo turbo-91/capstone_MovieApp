@@ -25,7 +25,7 @@ public class UserController {
         this.userRepo = userRepo;
     }
 
-    @GetMapping("active")
+    @GetMapping(value = "active", produces = "text/plain")
     public String getActiveUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
@@ -69,9 +69,6 @@ public class UserController {
                     });
         }
     }
-
-
-
 
     @GetMapping("active/{userId}")
     public User getActiveUser(@PathVariable String userId) {
