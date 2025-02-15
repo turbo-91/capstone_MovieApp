@@ -35,45 +35,41 @@ public class UserController {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         System.out.println("🔍 Principal Object: " + principal);
 
-        try {
-            // Extract username
-            String userName = null;
-            try {
-                userName = principal.getClass().getMethod("getAttribute", String.class)
-                        .invoke(principal, "login")
-                        .toString();
-            } catch (Exception e) {
-                System.out.println("❌ Error accessing 'login' attribute: " + e.getMessage());
-            }
+        String userName = null;
 
-            if (userName == null) {
-                throw new AuthException("Could not retrieve user details.");
-            }
+        if (principal instanceof OAuth2User) {
+            // ✅ OAuth2 login
+            userName = ((OAuth2User) principal).getAttribute("login");
+        } else if (principal instanceof org.springframework.security.core.userdetails.User) {
+            // ✅ Standard Spring Security login
+            userName = userId; // Instead of using getUsername(), set it explicitly
+        }
 
-            // Ensure the authenticated user matches the request
-            if (!SecurityContextHolder.getContext().getAuthentication().getName().equals(userId)) {
-                throw new AuthException("Unauthorized: User ID mismatch!");
-            }
+        if (userName == null) {
+            throw new AuthException("Could not retrieve user details.");
+        }
 
-            // Synchronize on the userId to prevent duplicate inserts
-            synchronized (userId.intern()) {
-                String finalUserName = userName;
-                return userRepo.findByGithubId(userId)
-                        .map(existingUser -> {
-                            System.out.println("ℹ️ User already exists in DB.");
-                            return userId; // User already exists, return userId
-                        })
-                        .orElseGet(() -> {
-                            System.out.println("💾 Saving new user...");
-                            userRepo.save(new User(null, userId, finalUserName, List.of()));
-                            System.out.println("✅ User saved successfully!");
-                            return userId;
-                        });
-            }
-        } catch (Exception e) {
-            throw new AuthException("Unexpected error: " + e.getMessage());
+        // Ensure authenticated user matches request
+        if (!SecurityContextHolder.getContext().getAuthentication().getName().equals(userId)) {
+            throw new AuthException("Unauthorized: User ID mismatch!");
+        }
+
+        synchronized (userId.intern()) {
+            String finalUserName = userName;
+            return userRepo.findByGithubId(userId)
+                    .map(existingUser -> {
+                        System.out.println("ℹ️ User already exists in DB.");
+                        return userId; // User already exists
+                    })
+                    .orElseGet(() -> {
+                        System.out.println("💾 Saving new user...");
+                        userRepo.save(new User(null, userId, finalUserName, List.of()));
+                        System.out.println("✅ User saved successfully!");
+                        return userId;
+                    });
         }
     }
+
 
 
 
