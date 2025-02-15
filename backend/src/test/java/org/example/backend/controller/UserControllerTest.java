@@ -45,14 +45,12 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Clear the database before each test
         userRepo.deleteAll();
 
-        // Insert test user
+        // Ensure the user is persisted before testing
         User testUser = new User(null, TEST_USER_ID, TEST_USERNAME, List.of());
         userRepo.save(testUser);
 
-        // Verify user is saved
         assertTrue(userRepo.findByGithubId(TEST_USER_ID).isPresent(), "User should exist in database before test runs");
     }
 
@@ -79,13 +77,15 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "12345") // Ensures an authenticated user for basic security
     void testSaveActiveUser_WhenUserNotExists_ShouldSaveUser() throws Exception {
-        // Perform the POST request to save the user
+        mockAuthenticatedUser(); // Ensures OAuth2User authentication is set
+
         mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(content().string(TEST_USER_ID));
 
-        // Verify the user is saved in the database
+        // Verify user is saved
         Optional<User> savedUser = userRepo.findByGithubId(TEST_USER_ID);
         assertTrue(savedUser.isPresent(), "User should be saved in the database");
         assertEquals(TEST_USER_ID, savedUser.get().githubId());
@@ -94,7 +94,13 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "12345") // Ensures a logged-in user is detected
     void testGetActiveUser_WhenUserExists_ShouldReturnUser() throws Exception {
+        mockAuthenticatedUser(); // Ensure OAuth2User authentication
+
+        // Debug: Check if the user exists in the database
+        System.out.println("DEBUG: Users in DB -> " + userRepo.findAll());
+
         mockMvc.perform(get("/api/users/active/" + TEST_USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(content().json("""
@@ -110,6 +116,4 @@ class UserControllerTest {
     void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {
         mockMvc.perform(get("/api/users/active/nonexistentUser"))
                 .andExpect(status().isNotFound());
-    }
-
-}
+    }}
