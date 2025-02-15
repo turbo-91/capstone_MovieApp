@@ -2,6 +2,7 @@ package org.example.backend.controller;
 
 import org.example.backend.model.Movie;
 import org.example.backend.repo.MovieRepo;
+import org.example.backend.security.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,8 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.util.AssertionErrors.assertEquals;
 
 
-@SpringBootTest
+
 @AutoConfigureMockMvc
+@SpringBootTest
 @TestPropertySource(properties = {
         "TMDB_API_KEY=dummy-api-key",
         "NETZKINO_ENV=test-environment"

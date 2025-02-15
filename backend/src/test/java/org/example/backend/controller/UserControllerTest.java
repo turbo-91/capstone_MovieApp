@@ -20,10 +20,12 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -87,7 +89,7 @@ class UserControllerTest {
 
     @Test
     void testSaveActiveUser_WhenUserNotExists_ShouldSaveUser() throws Exception {
-        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
+        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(TEST_USER_ID));
 
@@ -102,7 +104,7 @@ class UserControllerTest {
 
     @Test
     void testSaveActiveUser_WhenUserDoesNotExist_ShouldSaveUser() throws Exception {
-        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
+        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(TEST_USER_ID));
 
@@ -116,7 +118,7 @@ class UserControllerTest {
     void testSaveActiveUser_WhenUserExists_ShouldNotCreateDuplicate() throws Exception {
         userRepo.save(new User(null, TEST_USER_ID, TEST_USERNAME, List.of()));
 
-        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID))
+        mockMvc.perform(post("/api/users/save/" + TEST_USER_ID).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(TEST_USER_ID));
 
