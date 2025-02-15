@@ -9,7 +9,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.bind.annotation.*;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -22,45 +25,68 @@ public class UserController {
         this.userRepo = userRepo;
     }
 
-    @GetMapping("active")
-    public String getActiveUserId() throws AuthException {
-            return ((OAuth2User) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
-                    .getAttribute("id").toString();
+    @GetMapping("me")
+    public String getActiveUserId() {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    @GetMapping("activefeds")
+    public String getPrincipal() {
+        return SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString();
+    }
+
+    @GetMapping("username")
+    public String getLogin() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        System.out.println("Principal Object: " + principal);
+
+        try {
+            return principal.getClass().getMethod("getAttribute", String.class).invoke(principal, "login").toString();
+        } catch (Exception e) {
+            System.out.println("Error accessing 'login' attribute: " + e.getMessage());
+            return principal.toString();
         }
+    }
 
     @PostMapping("save/{userId}")
     public String saveActiveUser(@PathVariable String userId) throws AuthException {
-        OAuth2User oAuth2User = (OAuth2User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        System.out.println("Principal Object: " + principal);
 
-        String authenticatedUserId = oAuth2User.getAttribute("id").toString();
-        String userName = oAuth2User.getAttribute("login");
+        try {
+            // Use reflection to extract "id" and "login" attributes dynamically
+            Method getAttributeMethod = principal.getClass().getMethod("getAttribute", String.class);
+            String authenticatedUserId = (String) getAttributeMethod.invoke(principal, "id");
+            String userName = (String) getAttributeMethod.invoke(principal, "login");
 
-        if (authenticatedUserId == null) {
-            throw new AuthException("Could not retrieve active user ID.");
+            if (authenticatedUserId == null || userName == null) {
+                throw new AuthException("Could not retrieve user details.");
+            }
+
+            // Ensure that the user ID being saved matches the authenticated user's ID
+            if (!authenticatedUserId.equals(userId)) {
+                throw new AuthException("Unauthorized: Provided user ID does not match authenticated user.");
+            }
+
+            // Check if user already exists in the database
+            Optional<User> existingUser = userRepo.findByGithubId(userId);
+            if (existingUser.isPresent()) {
+                System.out.println("User already exists in DB.");
+                return userId; // Return ID if already exists
+            }
+
+            // Save new user
+            User userToSave = new User(null, userId, userName, List.of());
+            System.out.println("Saving new user in DB...");
+            userRepo.save(userToSave);
+
+            return userId;
+
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new AuthException("Error accessing user details: " + e.getMessage());
         }
-        if (userName == null) {
-            throw new AuthException("Could not retrieve active user name.");
-        }
-
-        // Ensure that the user ID being saved matches the authenticated user's ID
-        if (!authenticatedUserId.equals(userId)) {
-            throw new AuthException("Unauthorized: Provided user ID does not match authenticated user.");
-        }
-
-        // Check if user already exists in the database
-        Optional<User> existingUser = userRepo.findByGithubId(userId);
-        if (existingUser.isPresent()) {
-            System.out.println("User already exists in DB.");
-            return userId; // Return ID if already exists
-        }
-
-        // Save new user
-        User userToSave = new User(null, userId, userName, List.of());
-        System.out.println("Saving new user in DB...");
-        userRepo.save(userToSave);
-
-        return userId;
     }
+
 
     @GetMapping("active/{userId}")
     public User getActiveUser(@PathVariable String userId) {
