@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.util.AssertionErrors.assertEquals;
 
 
@@ -165,7 +166,7 @@ class MovieControllerIntegrationTest {
         // Act & Assert: Send a POST request and verify response
         mvc.perform(MockMvcRequestBuilders.post("/api/movies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(movieJson))
+                        .content(movieJson).with(csrf()))
                 .andExpect(MockMvcResultMatchers.status().isOk()) // Assuming successful creation returns 200 OK
                 .andExpect(MockMvcResultMatchers.content().json(movieJson));
 
@@ -216,7 +217,7 @@ class MovieControllerIntegrationTest {
         // Act & Assert: Send a PUT request and verify response
         mvc.perform(MockMvcRequestBuilders.put("/api/movies/test-movie")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updatedMovieJson))
+                        .content(updatedMovieJson).with(csrf()))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().json(updatedMovieJson));
 
@@ -248,7 +249,7 @@ class MovieControllerIntegrationTest {
         movieRepo.save(existingMovie);
 
         // Act & Assert: Send DELETE request and expect 204 No Content
-        mvc.perform(MockMvcRequestBuilders.delete("/api/movies/test-movie"))
+        mvc.perform(MockMvcRequestBuilders.delete("/api/movies/test-movie").with(csrf()))
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
 
         // Verify: Check that the movie is no longer in the database
