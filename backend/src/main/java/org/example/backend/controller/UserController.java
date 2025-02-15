@@ -30,19 +30,6 @@ public class UserController {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-    @GetMapping("username")
-    public String getLogin() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        System.out.println("Principal Object: " + principal);
-
-        try {
-            return principal.getClass().getMethod("getAttribute", String.class).invoke(principal, "login").toString();
-        } catch (Exception e) {
-            System.out.println("Error accessing 'login' attribute: " + e.getMessage());
-            return principal.toString();
-        }
-    }
-
     @PostMapping("save/{userId}")
     public String saveActiveUser(@PathVariable String userId) throws AuthException {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -90,8 +77,6 @@ public class UserController {
             throw new AuthException("Unexpected error: " + e.getMessage());
         }
     }
-
-
 
     @GetMapping("active/{userId}")
     public User getActiveUser(@PathVariable String userId) {

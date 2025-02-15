@@ -1,5 +1,6 @@
 package org.example.backend.controller;
 
+import org.example.backend.repo.UserRepo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,11 +24,13 @@ class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private UserRepo userRepo;
 
     @Test
     @WithMockUser
     void testGetMe_WithLoggedInUser_expectUserId() throws Exception {
-        mockMvc.perform(get("/api/users/me"))
+        mockMvc.perform(get("/api/users/active"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("user"));
     }
