@@ -31,52 +31,51 @@ public class UserController {
     }
 
     @PostMapping("save/{userId}")
-    public String saveActiveUser(@PathVariable String userId) throws AuthException {
+    public synchronized String saveActiveUser(@PathVariable String userId) {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         System.out.println("🔍 Principal Object: " + principal);
 
         try {
-            // Extract user attributes
-            Method getAttributeMethod = principal.getClass().getMethod("getAttribute", String.class);
-            Object authenticatedUserIdObj = getAttributeMethod.invoke(principal, "id");
-            String userName = (String) getAttributeMethod.invoke(principal, "login");
+            // Extract username
+            String userName = null;
+            try {
+                userName = principal.getClass().getMethod("getAttribute", String.class)
+                        .invoke(principal, "login")
+                        .toString();
+            } catch (Exception e) {
+                System.out.println("❌ Error accessing 'login' attribute: " + e.getMessage());
+            }
 
-            // Ensure authenticatedUserId is always a String
-            String authenticatedUserId = authenticatedUserIdObj.toString();
-
-            System.out.println("✅ Extracted ID: " + authenticatedUserId);
-            System.out.println("✅ Extracted Username: " + userName);
-
-            if (authenticatedUserId == null || userName == null) {
-                System.out.println("❌ Failed to retrieve user details.");
+            if (userName == null) {
                 throw new AuthException("Could not retrieve user details.");
             }
 
-            if (!authenticatedUserId.equals(userId)) {
-                System.out.println("❌ Unauthorized: User ID mismatch!");
-                throw new AuthException("Unauthorized: Provided user ID does not match authenticated user.");
+            // Ensure the authenticated user matches the request
+            if (!SecurityContextHolder.getContext().getAuthentication().getName().equals(userId)) {
+                throw new AuthException("Unauthorized: User ID mismatch!");
             }
 
-            Optional<User> existingUser = userRepo.findByGithubId(userId);
-            if (existingUser.isPresent()) {
-                System.out.println("ℹ️ User already exists in DB.");
-                return userId;
+            // Synchronize on the userId to prevent duplicate inserts
+            synchronized (userId.intern()) {
+                String finalUserName = userName;
+                return userRepo.findByGithubId(userId)
+                        .map(existingUser -> {
+                            System.out.println("ℹ️ User already exists in DB.");
+                            return userId; // User already exists, return userId
+                        })
+                        .orElseGet(() -> {
+                            System.out.println("💾 Saving new user...");
+                            userRepo.save(new User(null, userId, finalUserName, List.of()));
+                            System.out.println("✅ User saved successfully!");
+                            return userId;
+                        });
             }
-
-            System.out.println("💾 Saving new user...");
-            userRepo.save(new User(null, userId, userName, List.of()));
-
-            System.out.println("✅ User saved successfully!");
-            return userId;
-
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            System.out.println("❌ Reflection error: " + e.getMessage());
-            throw new AuthException("Error accessing user details: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("❌ General error: " + e.getMessage());
             throw new AuthException("Unexpected error: " + e.getMessage());
         }
     }
+
+
 
     @GetMapping("active/{userId}")
     public User getActiveUser(@PathVariable String userId) {
