@@ -48,17 +48,23 @@ class UserControllerTest {
         // Clear the database before each test
         userRepo.deleteAll();
 
-        // Mock an OAuth2User principal
+        // Insert test user
+        User testUser = new User(null, TEST_USER_ID, TEST_USERNAME, List.of());
+        userRepo.save(testUser);
+
+        // Verify user is saved
+        assertTrue(userRepo.findByGithubId(TEST_USER_ID).isPresent(), "User should exist in database before test runs");
+    }
+
+    void mockAuthenticatedUser() {
         OAuth2User mockOAuth2User = mock(OAuth2User.class);
         when(mockOAuth2User.getAttribute("id")).thenReturn(TEST_USER_ID);
         when(mockOAuth2User.getAttribute("login")).thenReturn(TEST_USERNAME);
 
-        // Mock authentication
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(mockOAuth2User);
         when(authentication.getName()).thenReturn(TEST_USER_ID);
 
-        // Set the SecurityContext
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
@@ -85,6 +91,25 @@ class UserControllerTest {
         assertEquals(TEST_USER_ID, savedUser.get().githubId());
         assertEquals(TEST_USERNAME, savedUser.get().username());
         assertEquals(List.of(), savedUser.get().favorites());
+    }
+
+    @Test
+    void testGetActiveUser_WhenUserExists_ShouldReturnUser() throws Exception {
+        mockMvc.perform(get("/api/users/active/" + TEST_USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(content().json("""
+                    {
+                        "githubId": "12345",
+                        "username": "testUser",
+                        "favorites": []
+                    }
+                """));
+    }
+
+    @Test
+    void testGetActiveUser_WhenUserDoesNotExist_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(get("/api/users/active/nonexistentUser"))
+                .andExpect(status().isNotFound());
     }
 
 }
