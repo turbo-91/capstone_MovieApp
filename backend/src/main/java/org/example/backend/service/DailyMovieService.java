@@ -312,6 +312,20 @@ public class DailyMovieService {
         this.netzkinoEnv = netzkinoEnv;
     }
 
+    public List<Movie> fetchMoviesBySearchQuery(String searchQuery) {
+        System.out.println("Fetching movies using search query: " + searchQuery);
+
+        // Check if movies for this query already exist in the database
+        List<Movie> existingMovies = movieRepository.findByQueriesContaining(searchQuery).orElse(List.of());
+        if (!existingMovies.isEmpty()) {
+            System.out.println("Returning " + existingMovies.size() + " existing movies for query: " + searchQuery);
+            return existingMovies.stream().limit(5).toList();
+        }
+
+        // Fetch new movies with an empty dateFetched list
+        return fetchAndStoreMovies(searchQuery, List.of()); // ✅ Pass an empty list instead of today’s date
+    }
+
     public List<Movie> getMoviesOfTheDay(List<String> names) {
         System.out.println("Fetching daily movies...");
 
@@ -344,10 +358,10 @@ public class DailyMovieService {
         }
 
         System.out.println("Query not used before, fetching new movies...");
-        return fetchAndStoreMovies(query, today);
+        return fetchAndStoreMovies(query, List.of(today));
     }
 
-    public List<Movie> fetchAndStoreMovies(String query, LocalDate today) {
+    public List<Movie> fetchAndStoreMovies(String query, List<LocalDate> dateFetched) {
         System.out.println("Fetching movies from external API using query: " + query);
 
         List<Movie> collectedMovies = new ArrayList<>();
@@ -363,7 +377,7 @@ public class DailyMovieService {
                 List<Movie> newMovies = Optional.ofNullable(response.getBody())
                         .map(NetzkinoResponse::posts)
                         .orElse(Collections.emptyList()).stream()
-                        .map(post -> processMoviePost(post, finalQuery, today))
+                        .map(post -> processMoviePost(post, finalQuery, dateFetched))
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
 
@@ -398,7 +412,7 @@ public class DailyMovieService {
         return predefinedNames.get(secureRandom.nextInt(predefinedNames.size()));
     }
 
-    private Movie processMoviePost(Post post, String query, LocalDate today) {
+    private Movie processMoviePost(Post post, String query, List<LocalDate> dateFetched) {
         if (post.custom_fields() == null) {
             System.out.println("Post has no custom fields, skipping...");
             return null;
@@ -416,12 +430,12 @@ public class DailyMovieService {
             return null;
         }
 
-        return formatMovieData(post, query, today, imgImdb);
+        return formatMovieData(post, query, dateFetched, imgImdb);
     }
 
 
 
-    public Movie formatMovieData(Post post, String query, LocalDate today, String imgImdb) {
+    public Movie formatMovieData(Post post, String query, List<LocalDate> dateFetched, String imgImdb) {
         return new Movie(
                 post.slug(),
                 post.id(),
@@ -435,7 +449,7 @@ public class DailyMovieService {
                 CustomFields.getOrDefault(post.custom_fields().featured_img_all_small(), "").trim(),
                 imgImdb.trim(),
                 List.of(query),
-                List.of(today)
+                dateFetched
         );
     }
 
