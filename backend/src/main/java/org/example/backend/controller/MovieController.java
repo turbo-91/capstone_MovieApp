@@ -1,5 +1,6 @@
 package org.example.backend.controller;
 
+import org.example.backend.exceptions.InvalidSearchQueryException;
 import org.example.backend.model.Movie;
 import org.example.backend.service.DailyMovieService;
 import org.example.backend.service.MovieService;
@@ -79,6 +80,17 @@ public class MovieController {
         }
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<Movie>> searchMovies(@RequestParam(required = false) String query) {
+        if (query == null || query.trim().isEmpty()) {
+            throw new InvalidSearchQueryException("Search query cannot be empty.");
+        }
+
+        System.out.println("Controller received search request for query: " + query);
+        List<Movie> movies = dailyMovieService.fetchMoviesBySearchQuery(query);
+        return ResponseEntity.ok(movies);
+    }
 }
+
 
 
