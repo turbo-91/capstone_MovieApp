@@ -5,6 +5,7 @@ import org.example.backend.dtos.netzkino.NetzkinoResponse;
 import org.example.backend.dtos.netzkino.Post;
 import org.example.backend.dtos.tmdb.TmdbMovieResult;
 import org.example.backend.dtos.tmdb.TmdbResponse;
+import org.example.backend.exceptions.InvalidSearchQueryException;
 import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
 import org.example.backend.repo.MovieRepo;
@@ -314,6 +315,11 @@ public class DailyMovieService {
 
     public List<Movie> fetchMoviesBySearchQuery(String searchQuery) {
         System.out.println("Fetching movies using search query: " + searchQuery);
+
+        // Validate input: Ensure search query is not null or empty
+        if (searchQuery == null || searchQuery.trim().isEmpty()) {
+            throw new InvalidSearchQueryException("Search query cannot be null or empty.");
+        }
 
         // Check if movies for this query already exist in the database
         List<Movie> existingMovies = movieRepository.findByQueriesContaining(searchQuery).orElse(List.of());
