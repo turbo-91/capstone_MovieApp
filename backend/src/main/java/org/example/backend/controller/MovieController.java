@@ -1,7 +1,8 @@
 package org.example.backend.controller;
 
+import org.example.backend.exceptions.InvalidSearchQueryException;
 import org.example.backend.model.Movie;
-import org.example.backend.service.DailyMovieService;
+import org.example.backend.service.MovieAPIService;
 import org.example.backend.service.MovieService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,11 @@ public class MovieController {
 
     private static final Logger logger = LoggerFactory.getLogger(MovieController.class);
     private final MovieService movieService;
-    private final DailyMovieService dailyMovieService;
+    private final MovieAPIService movieAPIService;
 
-    public MovieController(MovieService movieService, DailyMovieService dailyMovieService) {
+    public MovieController(MovieService movieService, MovieAPIService movieAPIService) {
         this.movieService = movieService;
-        this.dailyMovieService = dailyMovieService;
+        this.movieAPIService = movieAPIService;
     }
 
     @GetMapping
@@ -69,7 +70,7 @@ public class MovieController {
     public ResponseEntity<List<Movie>> getDailyMovies() {
         System.out.println("Received request for daily movies");
         try {
-            List<Movie> movies = dailyMovieService.getMoviesOfTheDay(null); // Pass null to allow service to handle default
+            List<Movie> movies = movieAPIService.getMoviesOfTheDay(null); // Pass null to allow service to handle default
             System.out.println("Successfully retrieved " + movies.size() + " daily movies");
             return ResponseEntity.ok(movies);
         } catch (Exception e) {
@@ -79,6 +80,13 @@ public class MovieController {
         }
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<Movie>> searchMovies(@RequestParam(required = false) String query) {
+      System.out.println("Controller received search request for query: " + query);
+        List<Movie> movies = movieAPIService.fetchMoviesBySearchQuery(query);
+        return ResponseEntity.ok(movies);
+    }
 }
+
 
 

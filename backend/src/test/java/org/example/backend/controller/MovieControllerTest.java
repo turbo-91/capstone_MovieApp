@@ -1,7 +1,7 @@
 package org.example.backend.controller;
 
 import org.example.backend.model.Movie;
-import org.example.backend.service.DailyMovieService;
+import org.example.backend.service.MovieAPIService;
 import org.example.backend.service.MovieService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class MovieControllerTest {
 
     private MovieService movieService;
-    private DailyMovieService dailyMovieService;
+    private MovieAPIService movieAPIService;
     private MovieController movieController;
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -32,8 +32,8 @@ class MovieControllerTest {
     @BeforeEach
     void setUp() {
         movieService = mock(MovieService.class);
-        dailyMovieService = mock(DailyMovieService.class);
-        movieController = new MovieController(movieService, dailyMovieService);
+        movieAPIService = mock(MovieAPIService.class);
+        movieController = new MovieController(movieService, movieAPIService);
         mockMvc = MockMvcBuilders.standaloneSetup(movieController).build();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
@@ -188,34 +188,34 @@ class MovieControllerTest {
                 )
         );
 
-        when(dailyMovieService.getMoviesOfTheDay(any())).thenReturn(dailyMovies);
+        when(movieAPIService.getMoviesOfTheDay(any())).thenReturn(dailyMovies);
 
         // WHEN & THEN
         mockMvc.perform(get("/api/movies/daily"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(dailyMovies)));
 
-        verify(dailyMovieService).getMoviesOfTheDay(any());
+        verify(movieAPIService).getMoviesOfTheDay(any());
     }
 
     @Test
     void getDailyMovies_ShouldReturnEmptyList_WhenNoMoviesAvailable() throws Exception {
         // GIVEN
-        when(dailyMovieService.getMoviesOfTheDay(any())).thenReturn(List.of());
+        when(movieAPIService.getMoviesOfTheDay(any())).thenReturn(List.of());
 
         // WHEN & THEN
         mockMvc.perform(get("/api/movies/daily"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]")); // Expecting an empty JSON array
 
-        verify(dailyMovieService).getMoviesOfTheDay(any());
+        verify(movieAPIService).getMoviesOfTheDay(any());
     }
 
     @Test
     void getMoviesOfTheDay_ShouldHandleExceptionAndReturnEmptyList() {
         // GIVEN
         List<String> queries = List.of("Inception");
-        when(dailyMovieService.getMoviesOfTheDay(queries)).thenThrow(new RuntimeException("Database error"));
+        when(movieAPIService.getMoviesOfTheDay(queries)).thenThrow(new RuntimeException("Database error"));
 
         // WHEN
         ResponseEntity<List<Movie>> response = movieController.getDailyMovies();
