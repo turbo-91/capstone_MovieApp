@@ -315,13 +315,14 @@ public class MovieAPIService {
     }
 
     public List<Movie> fetchMoviesBySearchQuery(String searchQuery) {
-        SearchQueryValidator.validate(searchQuery);
-        System.out.println("Fetching movies using search query: " + searchQuery);
 
         // Validate input: Ensure search query is not null or empty
         if (searchQuery == null || searchQuery.trim().isEmpty()) {
             throw new InvalidSearchQueryException("Search query cannot be null or empty.");
         }
+        String sanitizedQuery = searchQuery.toLowerCase();  // Convert to lowercase
+        SearchQueryValidator.validate(sanitizedQuery);
+        System.out.println("Fetching movies using search query: " + sanitizedQuery);
 
         // Check if movies for this query already exist in the database
         List<Movie> existingMovies = movieRepository.findByQueriesContaining(searchQuery).orElse(List.of());

@@ -61,7 +61,7 @@ class MovieAPIServiceTest {
     @Test
     void fetchMoviesBySearchQuery_ShouldFetchNewMovies_WhenNoMoviesExistForQuery() {
         // GIVEN
-        String searchQuery = "The Dark Knight";
+        String searchQuery = "christopher";
         when(movieRepository.findByQueriesContaining(searchQuery)).thenReturn(Optional.empty());
         when(queryRepository.findAll()).thenReturn(List.of());
 
