@@ -109,7 +109,7 @@ class MovieControllerIntegrationTest {
         mvc.perform(MockMvcRequestBuilders.get("/api/movies/search"))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.error")
-                        .value("Search query cannot be empty."));
+                        .value("Search query cannot be null or empty."));   
     }
 
 
