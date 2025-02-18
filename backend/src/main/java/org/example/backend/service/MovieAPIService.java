@@ -10,6 +10,7 @@ import org.example.backend.model.Movie;
 import org.example.backend.model.Query;
 import org.example.backend.repo.MovieRepo;
 import org.example.backend.repo.QueryRepo;
+import org.example.backend.validation.SearchQueryValidator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ import java.time.LocalDate;
 import java.util.stream.Collectors;
 
 @Service
-public class DailyMovieService {
+public class MovieAPIService {
 
     private final MovieRepo movieRepository;
     private final RestTemplate restTemplate;
@@ -305,7 +306,7 @@ public class DailyMovieService {
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    public DailyMovieService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv) {
+    public MovieAPIService(MovieRepo movieRepository, RestTemplate restTemplate, QueryRepo queryRepository, @Value("${TMDB_API_KEY}") String tmdbApiKey, @Value("${NETZKINO_ENV}") String netzkinoEnv) {
         this.movieRepository = movieRepository;
         this.restTemplate = restTemplate;
         this.queryRepository = queryRepository;
@@ -314,6 +315,7 @@ public class DailyMovieService {
     }
 
     public List<Movie> fetchMoviesBySearchQuery(String searchQuery) {
+        SearchQueryValidator.validate(searchQuery);
         System.out.println("Fetching movies using search query: " + searchQuery);
 
         // Validate input: Ensure search query is not null or empty

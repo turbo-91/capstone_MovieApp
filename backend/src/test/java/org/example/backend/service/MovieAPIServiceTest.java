@@ -22,19 +22,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class DailyMovieServiceTest {
+class MovieAPIServiceTest {
 
     private MovieRepo movieRepository;
     private QueryRepo queryRepository;
     private RestTemplate restTemplate;
-    private DailyMovieService dailyMovieService;
+    private MovieAPIService movieAPIService;
 
     @BeforeEach
     void setUp() {
         movieRepository = mock(MovieRepo.class);
         queryRepository = mock(QueryRepo.class);
         restTemplate = mock(RestTemplate.class);
-        dailyMovieService = new DailyMovieService(movieRepository, restTemplate, queryRepository, "dummyTmdbApiKey", "dummyNetzkinoEnv");
+        movieAPIService = new MovieAPIService(movieRepository, restTemplate, queryRepository, "dummyTmdbApiKey", "dummyNetzkinoEnv");
     }
 
     @Test
@@ -50,7 +50,7 @@ class DailyMovieServiceTest {
         when(movieRepository.findByQueriesContaining(searchQuery)).thenReturn(Optional.of(List.of(movie)));
 
         // WHEN
-        List<Movie> movies = dailyMovieService.fetchMoviesBySearchQuery(searchQuery);
+        List<Movie> movies = movieAPIService.fetchMoviesBySearchQuery(searchQuery);
 
         // THEN
         assertEquals(1, movies.size());
@@ -173,7 +173,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(tmdbResponseEntity);
 
         // WHEN
-        List<Movie> movies = dailyMovieService.fetchMoviesBySearchQuery(searchQuery);
+        List<Movie> movies = movieAPIService.fetchMoviesBySearchQuery(searchQuery);
 
         // THEN
         assertFalse(movies.isEmpty());
@@ -190,7 +190,7 @@ class DailyMovieServiceTest {
 
         // WHEN & THEN
         InvalidSearchQueryException exception = assertThrows(InvalidSearchQueryException.class,
-                () -> dailyMovieService.fetchMoviesBySearchQuery(emptyQuery));
+                () -> movieAPIService.fetchMoviesBySearchQuery(emptyQuery));
 
         assertEquals("Search query cannot be null or empty.", exception.getMessage());
     }
@@ -210,7 +210,7 @@ class DailyMovieServiceTest {
 
         // WHEN & THEN
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> dailyMovieService.fetchMoviesBySearchQuery(searchQuery));
+                () -> movieAPIService.fetchMoviesBySearchQuery(searchQuery));
 
         assertEquals("Failed to fetch 5 movies after 10 attempts.", exception.getMessage());
     }
@@ -224,7 +224,7 @@ class DailyMovieServiceTest {
         when(movieRepository.findByDateFetchedContaining(today)).thenReturn(Optional.of(List.of(movie)));
 
         // WHEN
-        List<Movie> actualMovies = dailyMovieService.getMoviesOfTheDay(List.of("Inception"));
+        List<Movie> actualMovies = movieAPIService.getMoviesOfTheDay(List.of("Inception"));
 
         // THEN
         assertEquals(1, actualMovies.size());
@@ -348,7 +348,7 @@ class DailyMovieServiceTest {
         // WHEN
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class)))
                 .thenReturn(tmdbResponseEntity);
-        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(List.of("Inception"));
+        List<Movie> movies = movieAPIService.getMoviesOfTheDay(List.of("Inception"));
 
 
 
@@ -386,7 +386,7 @@ class DailyMovieServiceTest {
                 .findByDateFetchedContaining(any());
 
 // Test the method invocation
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> dailyMovieService.getMoviesOfTheDay(movieList));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> movieAPIService.getMoviesOfTheDay(movieList));
 
 // Validate the exception message
         assertEquals("Database error", exception.getMessage());
@@ -420,7 +420,7 @@ class DailyMovieServiceTest {
 
         // WHEN & THEN
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> dailyMovieService.getMoviesOfTheDay(movieQuery));
+                () -> movieAPIService.getMoviesOfTheDay(movieQuery));
 
         // Validate exception message
         assertEquals("Failed to fetch 5 movies after 10 attempts.", exception.getMessage());
@@ -434,7 +434,7 @@ class DailyMovieServiceTest {
         String imdbLink = "https://www.imdb.com/title/tt1234567/";
 
         // WHEN
-        String imdbId = dailyMovieService.extractImdbId(imdbLink);
+        String imdbId = movieAPIService.extractImdbId(imdbLink);
 
         // THEN
         assertEquals("tt1234567", imdbId);
@@ -446,7 +446,7 @@ class DailyMovieServiceTest {
         String invalidImdbLink = "invalid-link";
 
         // WHEN
-        String imdbId = dailyMovieService.extractImdbId(invalidImdbLink);
+        String imdbId = movieAPIService.extractImdbId(invalidImdbLink);
 
         // THEN
         assertEquals("", imdbId);
@@ -455,7 +455,7 @@ class DailyMovieServiceTest {
     @Test
     void extractImdbId_ShouldReturnEmptyString_WhenLinkIsNull() {
         // WHEN
-        String imdbId = dailyMovieService.extractImdbId(null);
+        String imdbId = movieAPIService.extractImdbId(null);
 
         // THEN
         assertEquals("", imdbId);
@@ -468,7 +468,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(ResponseEntity.ok(null));
 
         // WHEN
-        String result = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+        String result = movieAPIService.fetchMoviePosterFromTmdb(imdbId);
 
         // THEN
         assertEquals("N/A", result);
@@ -481,7 +481,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(null);
 
         // WHEN
-        String result = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+        String result = movieAPIService.fetchMoviePosterFromTmdb(imdbId);
 
         // THEN
         assertEquals("N/A", result);
@@ -494,7 +494,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(null);
 
         // WHEN
-        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+        String imageUrl = movieAPIService.fetchMoviePosterFromTmdb(imdbId);
 
         // THEN
         assertEquals("N/A", imageUrl);
@@ -510,7 +510,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(responseEntity);
 
         // WHEN
-        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+        String imageUrl = movieAPIService.fetchMoviePosterFromTmdb(imdbId);
 
         // THEN
         assertEquals("N/A", imageUrl);
@@ -527,7 +527,7 @@ class DailyMovieServiceTest {
         when(restTemplate.getForEntity(anyString(), eq(TmdbResponse.class))).thenReturn(responseEntity);
 
         // WHEN
-        String imageUrl = dailyMovieService.fetchMoviePosterFromTmdb(imdbId);
+        String imageUrl = movieAPIService.fetchMoviePosterFromTmdb(imdbId);
 
         // THEN
         assertEquals("N/A", imageUrl);
@@ -544,7 +544,7 @@ class DailyMovieServiceTest {
         when(movieRepository.findByQueriesContaining(query)).thenReturn(Optional.of(List.of(movie)));
 
         // WHEN
-        List<Movie> movies = dailyMovieService.getMoviesOfTheDay(List.of(query));
+        List<Movie> movies = movieAPIService.getMoviesOfTheDay(List.of(query));
 
         // THEN
         assertEquals(1, movies.size());
