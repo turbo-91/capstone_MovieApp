@@ -408,4 +408,88 @@ class MovieControllerIntegrationTest {
         """.formatted(LocalDate.now(), LocalDate.now())));
     }
 
+    @DirtiesContext
+    @Test
+    void searchMovies_shouldReturnTooManyRequests_whenRateLimitExceeded() throws Exception {
+        // Arrange: Insert a movie to avoid external API calls.
+        Movie rateLimitMovie = new Movie(
+                "rate-limit",
+                99999,
+                "rate-limit-test-movie",
+                "Rate Limit Test Movie",
+                "2024",
+                "Test description for rate limiting",
+                "Test Director",
+                "Test Stars",
+                "test-img",
+                "test-img-small",
+                "test-img-imdb",
+                List.of("ratelimittest"),
+                List.of(LocalDate.now())
+        );
+        movieRepo.save(rateLimitMovie);
+
+        // Act: Make the allowed number of requests first.
+        int allowedRequests = 2;  // matches your Bucket4j configuration
+        for (int i = 0; i < allowedRequests; i++) {
+            mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                            .param("query", "ratelimittest")
+                            .with(csrf()))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        // The next request should exceed the rate limit and return 429 Too Many Requests.
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isTooManyRequests());
+    }
+
+    @DirtiesContext
+    @Test
+    void searchMovies_shouldResetRateLimit_afterSomeDelay() throws Exception {
+        // Arrange: Insert a movie to avoid external API calls.
+        Movie rateLimitMovie = new Movie(
+                "rate-limit",
+                99999,
+                "rate-limit-test-movie",
+                "Rate Limit Test Movie",
+                "2024",
+                "Test description for rate limiting",
+                "Test Director",
+                "Test Stars",
+                "test-img",
+                "test-img-small",
+                "test-img-imdb",
+                List.of("ratelimittest"),
+                List.of(LocalDate.now())
+        );
+        movieRepo.save(rateLimitMovie);
+
+        // 1) Consume all available tokens.
+        int allowedRequests = 2;  // as configured
+        for (int i = 0; i < allowedRequests; i++) {
+            mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                            .param("query", "ratelimittest")
+                            .with(csrf()))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        // 2) This next request should hit the rate limit (429).
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isTooManyRequests());
+
+        // 3) Wait long enough for tokens to refill.
+        Thread.sleep(7000);  // adjust the delay based on your refill rate
+
+        // 4) Now the request should succeed again.
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+
 }
