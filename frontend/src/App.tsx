@@ -4,6 +4,7 @@ import MoviesOfTheDay from "./components/MoviesOfTheDay.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import {useState} from "react";
 import axios from "axios";
+import SearchQuery from "./components/SearchQuery.tsx";
 
 
 function App() {
@@ -22,6 +23,11 @@ function App() {
                         <Route
                             path="/"
                             element={<MoviesOfTheDay/>}
+
+                        />
+                        <Route
+                            path="/search"
+                            element={<SearchQuery/>}
 
                         />
                         <Route element={<ProtectedRoute user={user}/>}>

@@ -1,6 +1,9 @@
 package org.example.backend.controller;
 
-import org.example.backend.exceptions.InvalidSearchQueryException;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.Bucket4j;
+import io.github.bucket4j.Refill;
 import org.example.backend.model.Movie;
 import org.example.backend.service.MovieAPIService;
 import org.example.backend.service.MovieService;
@@ -11,7 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/movies")
@@ -20,6 +25,16 @@ public class MovieController {
     private static final Logger logger = LoggerFactory.getLogger(MovieController.class);
     private final MovieService movieService;
     private final MovieAPIService movieAPIService;
+
+    // bucket for API rate limiting
+    private final Bucket searchBucket = Bucket4j.builder()
+            .addLimit(
+                    Bandwidth.classic(
+                            2, // capacity of 2 tokens
+                            Refill.intervally(1, Duration.ofSeconds(6))
+                    )
+            )
+            .build();
 
     public MovieController(MovieService movieService, MovieAPIService movieAPIService) {
         this.movieService = movieService;
@@ -82,7 +97,12 @@ public class MovieController {
 
     @GetMapping("/search")
     public ResponseEntity<List<Movie>> searchMovies(@RequestParam(required = false) String query) {
-      System.out.println("Controller received search request for query: " + query);
+        // Try to consume one token. If no token is available, rate limit by returning 429.
+        if (!searchBucket.tryConsume(1)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+        }
+
+        logger.info("Controller received search request for query: {}", query);
         List<Movie> movies = movieAPIService.fetchMoviesBySearchQuery(query);
         return ResponseEntity.ok(movies);
     }
