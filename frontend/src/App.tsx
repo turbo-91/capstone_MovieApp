@@ -15,6 +15,7 @@ function App() {
         : window.location.origin;
 
     axios.defaults.withCredentials = true;
+    console.log("user in App", user)
 
     return (
             <Layout user={user} setUser={setUser}>
