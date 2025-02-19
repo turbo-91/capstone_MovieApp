@@ -1,7 +1,6 @@
 import {useEffect, useState} from "react";
 import NavBar from "./NavBar";
 import axios from 'axios'
-import {User} from "../../types/User.ts";
 
 type HeaderProps = {
     user: string | undefined;

@@ -39,6 +39,83 @@ class MovieControllerIntegrationTest {
 
     @DirtiesContext
     @Test
+    void searchMovies_shouldReturnMatchingMovies_whenQueryMatchesTitle() throws Exception {
+        // Arrange: Save test movies
+        Movie movie1 = new Movie(
+                "1",
+                12345,
+                "search-movie-1",
+                "The Best Movie",
+                "2024",
+                "An amazing test movie description",
+                "Director One",
+                "Star One",
+                "img1-netzkino",
+                "img1-netzkino-small",
+                "img1-imdb",
+                List.of("best", "movie"),
+                List.of(LocalDate.now())
+        );
+        Movie movie2 = new Movie(
+                "2",
+                67890,
+                "search-movie-2",
+                "Another Great Movie",
+                "2025",
+                "Another great test movie",
+                "Director Two",
+                "Star Two",
+                "img2-netzkino",
+                "img2-netzkino-small",
+                "img2-imdb",
+                List.of("great", "movie"),
+                List.of(LocalDate.now())
+        );
+        movieRepo.save(movie1);
+        movieRepo.save(movie2);
+
+        // Act & Assert: Search for "best" and expect movie1 to be returned
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "best"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.content().json("""
+                        [
+                            {
+                                "id": "1",
+                                "netzkinoId": 12345,
+                                "slug": "search-movie-1",
+                                "title": "The Best Movie",
+                                "year": "2024",
+                                "overview": "An amazing test movie description",
+                                "regisseur": "Director One",
+                                "stars": "Star One",
+                                "imgNetzkino": "img1-netzkino",
+                                "imgNetzkinoSmall": "img1-netzkino-small",
+                                "imgImdb": "img1-imdb",
+                                "queries": ["best", "movie"],
+                                "dateFetched": ["%s"]
+                            }
+                        ]
+                        """.formatted(LocalDate.now())));
+
+        // Verify: Ensure the correct movie is found
+        assertTrue(movieRepo.existsBySlug("search-movie-1"));
+    }
+
+    @DirtiesContext
+    @Test
+    void searchMovies_shouldReturnBadRequest_whenQueryIsEmpty() throws Exception {
+        // Act & Assert: Expect a 400 Bad Request if no query is provided
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.error")
+                        .value("Search query cannot be null or empty."));
+    }
+
+
+
+    @DirtiesContext
+    @Test
     void getAllMovies_shouldReturnEmptyList_whenRepositoryIsEmpty() throws Exception {
         mvc.perform(MockMvcRequestBuilders.get("/api/movies"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -330,5 +407,89 @@ class MovieControllerIntegrationTest {
             ]
         """.formatted(LocalDate.now(), LocalDate.now())));
     }
+
+    @DirtiesContext
+    @Test
+    void searchMovies_shouldReturnTooManyRequests_whenRateLimitExceeded() throws Exception {
+        // Arrange: Insert a movie to avoid external API calls.
+        Movie rateLimitMovie = new Movie(
+                "rate-limit",
+                99999,
+                "rate-limit-test-movie",
+                "Rate Limit Test Movie",
+                "2024",
+                "Test description for rate limiting",
+                "Test Director",
+                "Test Stars",
+                "test-img",
+                "test-img-small",
+                "test-img-imdb",
+                List.of("ratelimittest"),
+                List.of(LocalDate.now())
+        );
+        movieRepo.save(rateLimitMovie);
+
+        // Act: Make the allowed number of requests first.
+        int allowedRequests = 2;  // matches your Bucket4j configuration
+        for (int i = 0; i < allowedRequests; i++) {
+            mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                            .param("query", "ratelimittest")
+                            .with(csrf()))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        // The next request should exceed the rate limit and return 429 Too Many Requests.
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isTooManyRequests());
+    }
+
+    @DirtiesContext
+    @Test
+    void searchMovies_shouldResetRateLimit_afterSomeDelay() throws Exception {
+        // Arrange: Insert a movie to avoid external API calls.
+        Movie rateLimitMovie = new Movie(
+                "rate-limit",
+                99999,
+                "rate-limit-test-movie",
+                "Rate Limit Test Movie",
+                "2024",
+                "Test description for rate limiting",
+                "Test Director",
+                "Test Stars",
+                "test-img",
+                "test-img-small",
+                "test-img-imdb",
+                List.of("ratelimittest"),
+                List.of(LocalDate.now())
+        );
+        movieRepo.save(rateLimitMovie);
+
+        // 1) Consume all available tokens.
+        int allowedRequests = 2;  // as configured
+        for (int i = 0; i < allowedRequests; i++) {
+            mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                            .param("query", "ratelimittest")
+                            .with(csrf()))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        // 2) This next request should hit the rate limit (429).
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isTooManyRequests());
+
+        // 3) Wait long enough for tokens to refill.
+        Thread.sleep(7000);  // adjust the delay based on your refill rate
+
+        // 4) Now the request should succeed again.
+        mvc.perform(MockMvcRequestBuilders.get("/api/movies/search")
+                        .param("query", "ratelimittest")
+                        .with(csrf()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
 
 }

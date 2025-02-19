@@ -1,6 +1,5 @@
 import Header from "./Header.tsx";
 import {ReactNode} from "react";
-import {User} from "../../types/User.ts";
 
 interface LayoutProps {
     children: ReactNode;
