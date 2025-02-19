@@ -25,13 +25,8 @@ function App() {
                             element={<MoviesOfTheDay/>}
 
                         />
-                        <Route
-                            path="/search"
-                            element={<SearchQuery/>}
-
-                        />
                         <Route element={<ProtectedRoute user={user}/>}>
-
+                            <Route path="/search" element={<SearchQuery />} />
                         </Route>
                     </Routes>
                 </main>

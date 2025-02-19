@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import MovieCard from "./MovieCard.tsx";
 
 export default function SearchQuery() {
     const [query, setQuery] = useState("");
@@ -63,7 +64,7 @@ export default function SearchQuery() {
             {error && <p className="error">{error}</p>}
             <ul>
                 {movies.map((movie: any) => (
-                    <li key={movie.id}>{movie.title}</li>
+                    <MovieCard key={movie.id} movie={movie}/>
                 ))}
             </ul>
         </div>
