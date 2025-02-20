@@ -328,7 +328,7 @@ public class MovieAPIService {
         List<Movie> existingMovies = movieRepository.findByQueriesContaining(searchQuery).orElse(List.of());
         if (!existingMovies.isEmpty()) {
             System.out.println("Returning " + existingMovies.size() + " existing movies for query: " + searchQuery);
-            return existingMovies.stream().limit(5).toList();
+            return existingMovies.stream().toList();
         }
 
         // Fetch new movies with an empty dateFetched list
