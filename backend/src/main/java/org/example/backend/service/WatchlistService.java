@@ -42,7 +42,6 @@ public class WatchlistService {
 
     // ✅ Remove a movie from the watchlist
     public void removeFromWatchlist(String githubId, String movieSlug) {
-        System.out.println("Removing movie " + movieSlug + " from watchlist for user " + githubId);
         Optional<User> userOpt = userRepo.findByGithubId(githubId);
 
         userOpt.ifPresentOrElse(user -> {
