@@ -1,10 +1,74 @@
 import { useState, useEffect } from "react";
 import MovieDetail from "./MovieDetail.tsx";
 import { IMovie } from "../types/Movie.ts";
+import styled from "styled-components";
 
 interface SearchQueryProps {
     user: string | undefined;
 }
+
+// Styled Components
+const SearchContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    width: 80vw;
+    max-width: 1400px;
+    color: white;
+    font-family: Helvetica, Arial, sans-serif;
+`;
+
+const Input = styled.input`
+    padding: 0.75rem;
+    font-size: 1rem;
+    width: 50%;
+    max-width: 500px;
+    border: none;
+    border-radius: 4px;
+    outline: none;
+    text-align: center;
+`;
+
+const MoviesGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); // 🔥 Always 3 movies per row
+    gap: 2rem;
+    justify-content: center;
+    width: 100%;
+    max-width: 1400px;
+
+    @media (max-width: 1300px) {
+        grid-template-columns: repeat(2, 1fr); // 2 movies per row on medium screens
+    }
+
+    @media (max-width: 900px) {
+        grid-template-columns: repeat(1, 1fr); // 1 movie per row on smaller screens
+    }
+`;
+
+const MovieItem = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+
+    
+
+    img {
+        width: 400px; // 🔥 Fixed width of 400px
+        height: auto;
+        cursor: pointer;
+    }
+
+    h2 {
+        margin-top: 1rem;
+        cursor: pointer;
+    }
+`;
 
 export default function SearchQuery({ user }: SearchQueryProps) {
     const [query, setQuery] = useState("");
@@ -57,10 +121,9 @@ export default function SearchQuery({ user }: SearchQueryProps) {
     }, [query]);
 
     return (
-        <div className="search-container">
-            {/* ✅ Heading and Input Field are ALWAYS visible */}
+        <SearchContainer>
             <h2>Search Movies</h2>
-            <input
+            <Input
                 type="text"
                 value={query}
                 onChange={handleInputChange}
@@ -69,31 +132,26 @@ export default function SearchQuery({ user }: SearchQueryProps) {
 
             {error && <p className="error">{error}</p>}
 
-            {/* ✅ If no movies are found, display message but keep input visible */}
             {movies.length === 0 ? (
                 <p>No movies found.</p>
             ) : selectedMovie ? (
                 <MovieDetail user={user} movie={selectedMovie} onBack={() => setSelectedMovie(null)} />
             ) : (
-                <div className="movies-list">
+                <MoviesGrid>
                     {movies.map((movie) => (
-                        <div
+                        <MovieItem
                             key={movie.netzkinoId}
                             onClick={() => setSelectedMovie(movie)}
                             onKeyUp={() => setSelectedMovie(movie)}
                             role="button"
                             tabIndex={0}
-                            className="movie-item"
                         >
-                            <h2>{movie.title}</h2>
-                            <p>{movie.year}</p>
-                            <h3>{movie.regisseur}</h3>
-                            <p>{movie.stars}</p>
-                            <img src={movie.imgImdb} alt={movie.title} width="200" />
-                        </div>
+                            <img src={movie.imgImdb} alt={movie.title} />
+                            <h2>{movie.title} ({movie.year})</h2>
+                        </MovieItem>
                     ))}
-                </div>
+                </MoviesGrid>
             )}
-        </div>
+        </SearchContainer>
     );
 }

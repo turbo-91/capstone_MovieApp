@@ -1,13 +1,51 @@
 import MovieDetail from "./MovieDetail.tsx";
-import {IMovie} from "../types/Movie.ts";
-import {useEffect, useState} from "react";
+import { IMovie } from "../types/Movie.ts";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
-import {fetcher} from "../utils/fetcher.ts";
+import { fetcher } from "../utils/fetcher.ts";
+import styled from "styled-components";
 
 interface MoviesOfTheDayProps {
     user: string | undefined;
 }
 
+// Styled Components
+const MoviesContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem; // Space between movies
+  padding: 2rem;
+  width: 80vw;
+  max-width: 1400px;
+  color: white;
+  font-family: Helvetica, Arial, sans-serif;
+`;
+
+const MovieItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+
+ 
+
+  img, h2 {
+    cursor: pointer; // 🔥 Makes both image & title clickable
+  }
+
+  img {
+    width: 100%;
+    max-width: 800px; 
+    height: auto;
+  }
+
+  h2 {
+    margin-top: 1rem;
+  }
+`;
 
 export default function MoviesOfTheDay(props: Readonly<MoviesOfTheDayProps>) {
     const { user } = props;
@@ -29,30 +67,24 @@ export default function MoviesOfTheDay(props: Readonly<MoviesOfTheDayProps>) {
     if (!data?.length) return <p>No movies found.</p>;
 
     return (
-        <div className="app">
+        <MoviesContainer>
+            <h1>Movies of the Day</h1>
             {selectedMovie ? (
-                <MovieDetail
-                    user={user}
-                    movie={selectedMovie}
-                    onBack={() => setSelectedMovie(null)}
-                />
+                <MovieDetail user={user} movie={selectedMovie} onBack={() => setSelectedMovie(null)} />
             ) : (
                 data.map((movie: IMovie) => (
-                    <div
+                    <MovieItem
                         key={movie.netzkinoId}
                         onClick={() => setSelectedMovie(movie)}
                         onKeyUp={() => setSelectedMovie(movie)}
                         role="button"
                         tabIndex={0}
                     >
-                        <h2>{movie.title}</h2>
-                        <p>{movie.year}</p>
-                        <h2>{movie.regisseur}</h2>
-                        <p>{movie.stars}</p>
-                        <img src={movie.imgImdb} alt={movie.title} width="200" />
-                    </div>
+                        <img src={movie.imgImdb} alt={movie.title} />
+                        <h2>{movie.title} ({movie.year})</h2>
+                    </MovieItem>
                 ))
             )}
-        </div>
+        </MoviesContainer>
     );
 }
