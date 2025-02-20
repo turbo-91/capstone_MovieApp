@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import {useState} from "react";
 import axios from "axios";
 import SearchQuery from "./components/SearchQuery.tsx";
+import Watchlist from "./components/Watchlist.tsx";
 
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
                         />
                         <Route element={<ProtectedRoute user={user}/>}>
                             <Route path="/search" element={<SearchQuery user={user} />} />
+                            <Route path="/watchlist" element={<Watchlist user={user} />} />
                         </Route>
                     </Routes>
                 </main>

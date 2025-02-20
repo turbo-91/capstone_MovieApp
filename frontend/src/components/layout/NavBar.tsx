@@ -5,6 +5,7 @@ export default function NavBar() {
         <div>
             <a href="/">Home</a>
             <a href="/search">Search</a>
+            <a href="/watchlist">Watchlist</a>
         </div>
     );
 }
