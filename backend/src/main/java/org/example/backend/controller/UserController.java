@@ -1,9 +1,11 @@
 package org.example.backend.controller;
 
 import org.example.backend.exceptions.AuthException;
+import org.example.backend.exceptions.UnauthorizedException;
 import org.example.backend.exceptions.UserNotFoundException;
 import org.example.backend.model.User;
 import org.example.backend.repo.UserRepo;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
@@ -82,6 +84,36 @@ public class UserController {
                 .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " not found in database."));
     }
 
+    @PostMapping("/watchlist/{movieSlug}")
+    @ResponseStatus(HttpStatus.OK)
+    public User addToWatchlist(@PathVariable String movieSlug) {
+        System.out.println("addToWatchlist: Received request to add movie with slug: " + movieSlug);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        System.out.println("addToWatchlist: Authenticated user id: " + userId);
+
+        if ("anonymousUser".equals(userId) || "Unauthorized".equals(userId)) {
+            System.out.println("addToWatchlist: User is not authenticated. Throwing UnauthorizedException.");
+            throw new UnauthorizedException("User is not authenticated.");
+        }
+
+        User user = userRepo.findByGithubId(userId)
+                .orElseThrow(() -> {
+                    System.out.println("addToWatchlist: User with id " + userId + " not found.");
+                    return new UserNotFoundException("User with ID " + userId + " not found in database.");
+                });
+
+        System.out.println("addToWatchlist: Current watchlist for user " + user.username() + ": " + user.favorites());
+        if (!user.favorites().contains(movieSlug)) {
+            System.out.println("addToWatchlist: Movie not in watchlist. Adding movie with slug: " + movieSlug);
+            user.favorites().add(movieSlug);
+            userRepo.save(user);
+            System.out.println("addToWatchlist: Movie added. New watchlist: " + user.favorites());
+        } else {
+            System.out.println("addToWatchlist: Movie already exists in watchlist. No action taken.");
+        }
+
+        return user;
+    }
 
 
 }
