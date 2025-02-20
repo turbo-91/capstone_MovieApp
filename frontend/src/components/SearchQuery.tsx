@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
-import MovieCard from "./MovieCard.tsx";
+import MovieDetail from "./MovieDetail.tsx";
+import { IMovie } from "../types/Movie.ts";
 
-export default function SearchQuery() {
+interface SearchQueryProps {
+    user: string | undefined;
+}
+
+export default function SearchQuery({ user }: SearchQueryProps) {
     const [query, setQuery] = useState("");
-    const [movies, setMovies] = useState<any[]>([]);
+    const [movies, setMovies] = useState<IMovie[]>([]);
     const [error, setError] = useState("");
+    const [selectedMovie, setSelectedMovie] = useState<IMovie | null>(null);
 
     // ✅ Handles input while allowing only lowercase letters
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,9 +42,8 @@ export default function SearchQuery() {
         }
     };
 
-    // ✅ Debounce the search input: trigger the search 500ms after the user stops typing.
+    // ✅ Debounce the search input: trigger the search 700ms after the user stops typing.
     useEffect(() => {
-        // If the query is empty, clear movies and do nothing.
         if (!query.trim()) {
             setMovies([]);
             return;
@@ -48,12 +53,12 @@ export default function SearchQuery() {
             handleSearch();
         }, 700); // 700ms debounce delay
 
-        // Clear the timeout if query changes before delay is over
         return () => clearTimeout(debounceTimeout);
     }, [query]);
 
     return (
         <div className="search-container">
+            {/* ✅ Heading and Input Field are ALWAYS visible */}
             <h2>Search Movies</h2>
             <input
                 type="text"
@@ -61,12 +66,34 @@ export default function SearchQuery() {
                 onChange={handleInputChange}
                 placeholder="Enter movie name"
             />
+
             {error && <p className="error">{error}</p>}
-            <ul>
-                {movies.map((movie: any) => (
-                    <MovieCard key={movie.id} movie={movie}/>
-                ))}
-            </ul>
+
+            {/* ✅ If no movies are found, display message but keep input visible */}
+            {movies.length === 0 ? (
+                <p>No movies found.</p>
+            ) : selectedMovie ? (
+                <MovieDetail user={user} movie={selectedMovie} onBack={() => setSelectedMovie(null)} />
+            ) : (
+                <div className="movies-list">
+                    {movies.map((movie) => (
+                        <div
+                            key={movie.netzkinoId}
+                            onClick={() => setSelectedMovie(movie)}
+                            onKeyUp={() => setSelectedMovie(movie)}
+                            role="button"
+                            tabIndex={0}
+                            className="movie-item"
+                        >
+                            <h2>{movie.title}</h2>
+                            <p>{movie.year}</p>
+                            <h3>{movie.regisseur}</h3>
+                            <p>{movie.stars}</p>
+                            <img src={movie.imgImdb} alt={movie.title} width="200" />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

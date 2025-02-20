@@ -1,4 +1,5 @@
 import {IMovie} from "../types/Movie.ts";
+import {Link} from "react-router-dom";
 
 export interface MovieCardProps {
     movie: IMovie;
@@ -32,6 +33,7 @@ export default function MovieCard(props: Readonly<MovieCardProps>) {
                     <strong>Stars:</strong> {movie.stars}
                 </p>
             </div>
+            <Link to={`api/movies/${movie.slug}`}>More</Link>
         </div>
     );
 }

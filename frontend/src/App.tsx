@@ -23,11 +23,11 @@ function App() {
                     <Routes>
                         <Route
                             path="/"
-                            element={<MoviesOfTheDay/>}
+                            element={<MoviesOfTheDay user={user}/>}
 
                         />
                         <Route element={<ProtectedRoute user={user}/>}>
-                            <Route path="/search" element={<SearchQuery />} />
+                            <Route path="/search" element={<SearchQuery user={user} />} />
                         </Route>
                     </Routes>
                 </main>

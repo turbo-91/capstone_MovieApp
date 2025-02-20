@@ -1,9 +1,11 @@
 package org.example.backend.controller;
 
 import org.example.backend.exceptions.AuthException;
+import org.example.backend.exceptions.UnauthorizedException;
 import org.example.backend.exceptions.UserNotFoundException;
 import org.example.backend.model.User;
 import org.example.backend.repo.UserRepo;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
@@ -81,4 +83,5 @@ public class UserController {
         return userRepo.findByGithubId(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " not found in database."));
     }
+
 }
