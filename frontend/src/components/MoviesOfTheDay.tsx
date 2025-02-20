@@ -4,8 +4,13 @@ import {useEffect, useState} from "react";
 import useSWR from "swr";
 import {fetcher} from "../utils/fetcher.ts";
 
+interface MoviesOfTheDayProps {
+    user: string | undefined;
+}
 
-export default function MoviesOfTheDay() {
+
+export default function MoviesOfTheDay(props: Readonly<MoviesOfTheDayProps>) {
+    const { user } = props;
     const [movies, setMovies] = useState<IMovie[]>([]);
     const { data, error } = useSWR("api/movies/daily", fetcher, {
         shouldRetryOnError: false,
@@ -27,6 +32,7 @@ export default function MoviesOfTheDay() {
         <div className="app">
             {selectedMovie ? (
                 <MovieDetail
+                    user={user}
                     movie={selectedMovie}
                     onBack={() => setSelectedMovie(null)}
                 />
