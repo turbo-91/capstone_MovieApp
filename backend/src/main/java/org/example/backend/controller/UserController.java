@@ -115,5 +115,35 @@ public class UserController {
         return user;
     }
 
+    @DeleteMapping("/watchlist/{movieSlug}")
+    @ResponseStatus(HttpStatus.OK)
+    public User removeFromWatchlist(@PathVariable String movieSlug) {
+        System.out.println("removeFromWatchlist: Received request to remove movie with slug: " + movieSlug);
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        System.out.println("removeFromWatchlist: Authenticated user id: " + userId);
+
+        if ("anonymousUser".equals(userId) || "Unauthorized".equals(userId)) {
+            System.out.println("removeFromWatchlist: User is not authenticated. Throwing UnauthorizedException.");
+            throw new UnauthorizedException("User is not authenticated.");
+        }
+
+        User user = userRepo.findByGithubId(userId)
+                .orElseThrow(() -> {
+                    System.out.println("removeFromWatchlist: User with id " + userId + " not found.");
+                    return new UserNotFoundException("User with ID " + userId + " not found in database.");
+                });
+
+        System.out.println("removeFromWatchlist: Current watchlist for user " + user.username() + ": " + user.favorites());
+        if (user.favorites().contains(movieSlug)) {
+            System.out.println("removeFromWatchlist: Movie found in watchlist. Removing movie with slug: " + movieSlug);
+            user.favorites().remove(movieSlug);
+            userRepo.save(user);
+            System.out.println("removeFromWatchlist: Movie removed. New watchlist: " + user.favorites());
+        } else {
+            System.out.println("removeFromWatchlist: Movie with slug: " + movieSlug + " not found in watchlist. No action taken.");
+        }
+
+        return user;
+    }
 
 }
